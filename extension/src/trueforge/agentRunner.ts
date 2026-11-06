@@ -104,16 +104,16 @@ export class AgentRunner {
         const msg = result.error ?? 'unknown error';
         if (TRANSIENT.test(msg) && attempt < MAX_RETRIES_PER_MODEL) {
           const delay = retryDelayMs(msg, attempt);
-          hooks.onStatus?.(`${model}: ${msg}. Retrying in ${delay / 1000}s (attempt ${attempt + 2}/${MAX_RETRIES_PER_MODEL + 1})`, 'warn');
+          hooks.onStatus?.(`${model}: ${summarizeError(msg)} Retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 2}/${MAX_RETRIES_PER_MODEL + 1}).`, 'warn');
           await (this.opts.sleep ?? sleep)(delay);
           continue;
         }
         const next = this.opts.models[this.modelIndex + 1];
         hooks.onStatus?.(next
-          ? `${model} failed: ${msg}. Falling back to ${next} automatically.`
-          : `${model} failed: ${msg}. No more fallback models configured.`, next ? 'warn' : 'error');
+          ? `${model} failed: ${summarizeError(msg)} Falling back to ${next} automatically.`
+          : `${model} failed: ${summarizeError(msg)} No more fallback models configured.`, next ? 'warn' : 'error');
         this.sessionId = undefined; // a fallback model gets a fresh TrueForge session
-        if (!next) return { status: 'error', error: msg, model };
+        if (!next) return { status: 'error', error: summarizeError(msg), model };
         break;
       }
     }
@@ -161,9 +161,9 @@ export class AgentRunner {
           const call = src?.toolCalls?.find(tc => tc.id === ref.id);
           let args: unknown = {};
           try { args = JSON.parse(call?.function.arguments || '{}'); } catch { args = call?.function.arguments; }
-          const info = call?.toolInfo as { name?: string; serverName?: string; mcpServerName?: string } | undefined;
-          const req: ApprovalRequest = { threadId: pause.threadId, toolCallId: ref.id,
-            toolName: info?.name ?? call?.function.name ?? 'unknown', serverName: info?.serverName ?? info?.mcpServerName, args };
+          const info = call?.toolInfo as { name?: string; serverName?: string } | undefined;
+          const u = unwrapDeferred(info?.name ?? call?.function.name ?? 'unknown', info?.serverName, args);
+          const req: ApprovalRequest = { threadId: pause.threadId, toolCallId: ref.id, toolName: u.name, serverName: u.server, args: u.args };
           const d: ApprovalDecision = hooks.onApproval ? await hooks.onApproval(req) : { allow: false, reason: 'no approval handler' };
           if (this.cancelled) return { status: 'cancelled' };
           decisions.push({ type: 'user.tool_approval', threadId: pause.threadId, toolCallId: ref.id,
@@ -174,6 +174,27 @@ export class AgentRunner {
     }
     return { status: 'done' };
   }
+}
+
+/**
+ * TrueForge deferred tool loading routes non-preloaded tools through the meta-tool
+ * `call_tool {mcp_server, tool_name, input}`. Unwrap it so approvals and the UI see the real tool.
+ */
+export function unwrapDeferred(name: string, server: string | undefined, args: unknown): { name: string; server?: string; args: unknown; deferred: boolean } {
+  const a = args as { mcp_server?: string; tool_name?: string; input?: unknown } | undefined;
+  if (name === 'call_tool' && a?.tool_name) return { name: a.tool_name, server: a.mcp_server, args: a.input ?? {}, deferred: true };
+  return { name, server, args, deferred: false };
+}
+
+/** Turns a raw provider error into one short, human-readable line. */
+export function summarizeError(msg: string): string {
+  const retry = /retry (?:in|after) ([\d.]+)\s*s/i.exec(msg);
+  if (/429|quota|rate.?limit/i.test(msg)) return `Rate limit / quota exceeded at the provider (429)${retry ? `; provider asks to wait ${Math.ceil(+retry[1])}s` : ''}.`;
+  if (/cannot connect|ECONNREFUSED|ENOTFOUND|bad port|fetch failed/i.test(msg)) return 'Model endpoint unreachable (connection failed).';
+  if (/401|403|invalid.*key|unauthori[sz]ed|permission/i.test(msg)) return 'Model provider rejected the API key (auth error).';
+  if (/Unknown model/i.test(msg)) return `Model is not configured in TrueForge (${/"([^"]+)"/.exec(msg)?.[1] ?? 'unknown'}).`;
+  const first = msg.replace(/^\[Model Error\]\s*/, '').split(/\n/)[0];
+  return first.length > 160 ? first.slice(0, 157) + '…' : first;
 }
 
 /** Exponential backoff (2s, 4s, …), but honour a provider's "retry in Ns" hint (capped at 65s). */

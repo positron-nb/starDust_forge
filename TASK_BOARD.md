@@ -12,7 +12,7 @@
 | P1.3 | PoC: session + streaming turn via SDK | VERIFIED |
 | P1.4 | PoC: TrueForge calls localhost MCP tool | VERIFIED |
 | P1.5 | PoC: failure surface for Task C | VERIFIED |
-| P2 | Extension foundation (panel, client, streaming, cancel, fallback) | TESTED (headless smoke + 8 unit tests; UI not yet seen in VS Code) |
+| P2 | Extension foundation (panel, client, streaming, cancel, fallback) | TESTED (headless smoke + 10 unit tests; panel VERIFIED in VS Code by user) |
 | P3 | Workspace MCP tools | NOT STARTED |
 | P4 | Context engine (@file/@symbol, retrieval, budget, explanations) | NOT STARTED |
 | P5 | Inline edit + diff review (hunks, undo, rollback) | NOT STARTED |

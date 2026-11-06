@@ -42,3 +42,17 @@ describe('agent spec', () => {
     expect((s.config as { sandbox: { enabled: boolean } }).sandbox.enabled).toBe(false);
   });
 });
+
+import { summarizeError, unwrapDeferred } from '../src/trueforge/agentRunner';
+describe('error summaries and deferred tools', () => {
+  it('summarizes provider errors to one line', () => {
+    expect(summarizeError('[Model Error] Request failed (429): quota ... Please retry in 35.7s.')).toMatch(/^Rate limit.*wait 36s/);
+    expect(summarizeError('[Model Error] Cannot connect to API: bad port')).toBe('Model endpoint unreachable (connection failed).');
+    expect(summarizeError('401 invalid api key')).toMatch(/rejected the API key/);
+  });
+  it('unwraps call_tool so approvals see the real tool', () => {
+    expect(unwrapDeferred('call_tool', 'deferred', { mcp_server: 'forge-workspace', tool_name: 'propose_edit', input: { path: 'a' } }))
+      .toEqual({ name: 'propose_edit', server: 'forge-workspace', args: { path: 'a' }, deferred: true });
+    expect(unwrapDeferred('read_file', 'x', {}).deferred).toBe(false);
+  });
+});

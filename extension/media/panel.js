@@ -37,8 +37,13 @@
           container(m.thread).appendChild(d); tools.set(m.id, d);
         }
         let args = m.args; try { args = JSON.stringify(JSON.parse(m.args), null, 1); } catch (e) { /* partial JSON while streaming */ }
-        let brief = ''; try { const a = JSON.parse(m.args); brief = a.path || a.pattern || a.query || a.symbol || a.command || ''; } catch (e) {}
-        d.querySelector('summary').textContent = '🔧 ' + m.name + (brief ? '  ' + brief : '');
+        let name = m.name, a = {}, tag = '';
+        try { a = JSON.parse(m.args) || {}; } catch (e) {}
+        // TrueForge deferred tool loading: meta-tools discover/call our tools on demand.
+        if (name === 'call_tool' && a.tool_name) { name = a.tool_name; a = a.input || {}; tag = ' ⟨deferred⟩'; }
+        else if (['list_tools', 'get_tool_info', 'get_tool_output_schema'].includes(name)) tag = ' ⟨deferred tool loading' + (a.tool_name ? ': ' + a.tool_name : '') + '⟩';
+        const brief = a.path || a.pattern || a.query || a.symbol || a.command || '';
+        d.querySelector('summary').textContent = '🔧 ' + name + (brief ? '  ' + brief : '') + tag;
         d.querySelector('.args').textContent = args;
         break;
       }

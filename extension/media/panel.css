@@ -24,3 +24,6 @@ button { background: var(--vscode-button-background); color: var(--vscode-button
 button:disabled { opacity: .45; cursor: default; }
 #cancel:not(:disabled) { background: var(--vscode-inputValidation-errorBackground); }
 body.running #status::before { content: '● '; color: var(--vscode-progressBar-background); }
+main, .msg, .note, #status, details.tool pre { overflow-wrap: anywhere; word-break: break-word; }
+main { overflow-x: hidden; }
+#status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
