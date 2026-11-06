@@ -32,6 +32,7 @@ Explicit context: `@file:path` (full ≤250 lines, otherwise an outline) and `@s
 |---|---|---|---|
 | `google-gemini/gemini-3-5-flash` | Google AI Studio API, free tier | primary | ₹0 (free tier, 5 req/min) |
 | `google-gemini/gemini-3-1-flash-lite` | same | automatic fallback | ₹0 |
+| `local-ollama/qwen3-forge` (qwen3:8b, 16k ctx, q8 KV cache) | Ollama on own laptop, RTX 5060 8 GB, 100% GPU | local primary / offline | ₹0 (electricity) |
 | `broken/dead-model` (custom → `http://127.0.0.1:9/v1`) | unreachable on purpose | Task C | — |
 TODO: add any paid model used for the final recording, with cost.
 Switching models: edit `forge.models` (ordered fallback list) in VS Code settings; any provider configured in TrueForge works.

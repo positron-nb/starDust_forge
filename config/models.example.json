@@ -3,33 +3,78 @@
   "providers": [
     {
       "type": "google-gemini",
-      "auth": { "api_key": "YOUR_GEMINI_API_KEY" },
+      "auth": {
+        "api_key": "YOUR_GEMINI_API_KEY"
+      },
       "models": [
-        { "name": "gemini-3-5-flash", "model_id": "gemini-3.5-flash", "properties": { "context_length": 1048576, "max_output_tokens": 65536 } },
-        { "name": "gemini-3-1-flash-lite", "model_id": "gemini-3.1-flash-lite", "properties": { "context_length": 1048576, "max_output_tokens": 65536 } }
+        {
+          "name": "gemini-3-5-flash",
+          "model_id": "gemini-3.5-flash",
+          "properties": {
+            "context_length": 1048576,
+            "max_output_tokens": 65536
+          }
+        },
+        {
+          "name": "gemini-3-1-flash-lite",
+          "model_id": "gemini-3.1-flash-lite",
+          "properties": {
+            "context_length": 1048576,
+            "max_output_tokens": 65536
+          }
+        }
       ]
     },
     {
-      "_comment": "Optional: any OpenAI-compatible endpoint (Ollama, vLLM, a gateway…). Registered only with --with-optional.",
+      "_comment": "Local, free: Ollama (OpenAI-compatible). First: ollama create qwen3-forge -f config/ollama/Modelfile.qwen3-forge  (16k context, fits 8 GB VRAM with OLLAMA_FLASH_ATTENTION=1 and OLLAMA_KV_CACHE_TYPE=q8_0; Ollama's default 4k is too small). Registered only with --with-optional.",
       "_optional": true,
       "type": "custom",
       "name": "local-ollama",
       "base_url": "http://127.0.0.1:11434/v1",
-      "auth": { "api_key": "ollama" },
-      "models": [{ "name": "qwen3-coder", "model_id": "qwen3-coder", "properties": { "context_length": 32768, "max_output_tokens": 8192 } }]
+      "auth": {
+        "api_key": "ollama"
+      },
+      "models": [
+        {
+          "name": "qwen3-forge",
+          "model_id": "qwen3-forge",
+          "properties": {
+            "context_length": 16384,
+            "max_output_tokens": 8192
+          }
+        }
+      ]
     },
     {
       "_comment": "Task C: an intentionally unreachable endpoint. Put broken/dead-model FIRST in forge.models to demo automatic fallback.",
       "type": "custom",
       "name": "broken",
       "base_url": "http://127.0.0.1:9/v1",
-      "auth": { "api_key": "invalid" },
-      "models": [{ "name": "dead-model", "model_id": "dead-model", "properties": { "context_length": 128000, "max_output_tokens": 4096 } }]
+      "auth": {
+        "api_key": "invalid"
+      },
+      "models": [
+        {
+          "name": "dead-model",
+          "model_id": "dead-model",
+          "properties": {
+            "context_length": 128000,
+            "max_output_tokens": 4096
+          }
+        }
+      ]
     }
   ],
   "vscode_settings_example": {
     "forge.baseUrl": "http://localhost:8790",
-    "forge.models": ["google-gemini/gemini-3-5-flash", "google-gemini/gemini-3-1-flash-lite"],
-    "forge.models (Task C demo)": ["broken/dead-model", "google-gemini/gemini-3-5-flash", "google-gemini/gemini-3-1-flash-lite"]
+    "forge.models": [
+      "google-gemini/gemini-3-5-flash",
+      "google-gemini/gemini-3-1-flash-lite"
+    ],
+    "forge.models (Task C demo)": [
+      "broken/dead-model",
+      "google-gemini/gemini-3-5-flash",
+      "google-gemini/gemini-3-1-flash-lite"
+    ]
   }
 }

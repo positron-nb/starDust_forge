@@ -1,0 +1,6 @@
+[session] http://localhost:8790/sessions/01m6rj8ehfvdxces7513vwxccn (local-ollama/qwen3-forge)
+  [review] src/flask/helpers.py: 2 hunk(s) → accept all
+  [tool] propose_edit {"path":"src/flask/helpers.py","edits":2}
+
+RESULT done on local-ollama/qwen3-forge in 60s; files written: src/flask/helpers.py
+The docstring has been updated to list all false values ('0', 'false', 'no', 'off', 'n') with case-insensitive treatment, and the code now correctly treats 'off' and 'n' as false. No further action needed.

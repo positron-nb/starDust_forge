@@ -42,6 +42,16 @@ node scripts/setup-trueforge.mjs                     # registers providers + sav
 ```
 Any TrueForge provider works (OpenAI, Anthropic, Gemini, OpenAI-compatible `custom`, …). The extension never calls a model provider directly.
 
+**Free, fully local option (tested on an 8 GB RTX 5060 laptop GPU):**
+```bash
+# Ollama ≥ 0.40, with flash attention + 8-bit KV cache so a 16k context fits in 8 GB VRAM
+setx OLLAMA_FLASH_ATTENTION 1 && setx OLLAMA_KV_CACHE_TYPE q8_0     # then restart Ollama
+ollama pull qwen3:8b
+ollama create qwen3-forge -f config/ollama/Modelfile.qwen3-forge     # 16k context (Ollama's 4k default is too small)
+node scripts/setup-trueforge.mjs --with-optional                     # registers local-ollama/qwen3-forge
+```
+Then set `forge.models` to `["local-ollama/qwen3-forge", "google-gemini/gemini-3-5-flash"]`. Check `ollama ps` shows `100% GPU`.
+
 ### 3. Build and run the extension
 ```bash
 cd extension
