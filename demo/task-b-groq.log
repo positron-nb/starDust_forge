@@ -1,0 +1,11 @@
+[session] http://localhost:8790/sessions/01m6rwgmz45j8a14xh0qbthd1w (groq/gpt-oss-120b)
+  [tool] get_context {"query":"flask CLI built-in commands source code config command","budget_tokens":8000}
+  [context] 7334/8000 tok → src/flask/cli.py, docs/cli.rst, tests/test_cli.py, src/flask/testing.py, src/flask/app.py, docs/testing.rst, src/flask/blueprints.py, src/flask/templating.py, tests/test_testing.py, docs/appcontext.rst
+[warn] groq/gpt-oss-120b failed: Request failed (413): Request too large for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens p… Falling back to google-gemini/gemini-3-5-flash automatically.
+[session] http://localhost:8790/sessions/01m6rwgpbk7e9b1pctj1mrn4c3 (google-gemini/gemini-3-5-flash)
+[warn] google-gemini/gemini-3-5-flash: Rate limit / quota exceeded at the provider (429). Retrying in 2s (attempt 2/3).
+[warn] google-gemini/gemini-3-5-flash: Rate limit / quota exceeded at the provider (429). Retrying in 4s (attempt 3/3).
+[error] google-gemini/gemini-3-5-flash failed: Rate limit / quota exceeded at the provider (429). No more fallback models configured.
+
+RESULT error on google-gemini/gemini-3-5-flash in 25s; files written: none
+Rate limit / quota exceeded at the provider (429).

@@ -1,0 +1,98 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..d689e9b8 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -146,6 +146,24 @@ context will be active, and the app instance will be imported. ::
+ Use :meth:`~Flask.shell_context_processor` to add other automatic imports.
+ 
+ 
++Show Configuration
++------------------
++
++To inspect the configuration of your application, you can use the
++:func:`config <cli.config_command>` command. It prints the loaded configuration
++as JSON, masking the values of any key containing ``SECRET``, ``PASSWORD``,
++``TOKEN``, or ``KEY`` as ``"***"``. ::
++
++    $ flask config
++    {
++      "ENV": "production",
++      "DEBUG": false,
++      "TESTING": false,
++      "SECRET_KEY": "***"
++    }
++
++
++
+ .. _dotenv:
+ 
+ Environment Variables From dotenv
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..92b729ca 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -594,6 +594,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1116,28 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the config for the app.")
++@with_appcontext
++def config_command() -> None:
++    """Show the loaded application's configuration as JSON."""
++    import json
++
++    config_data = {}
++    for key, value in current_app.config.items():
++        if any(term in key for term in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            config_data[key] = "***"
++        else:
++            try:
++                # Ensure the value is JSON serializable
++                json.dumps(value)
++                config_data[key] = value
++            except (TypeError, ValueError):
++                config_data[key] = str(value)
++
++    click.echo(json.dumps(config_data, indent=2))
++
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..12358930 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -700,3 +700,23 @@ def test_cli_empty(app):
+ def test_run_exclude_patterns():
+     ctx = run_command.make_context("run", ["--exclude-patterns", __file__])
+     assert ctx.params["exclude_patterns"] == [__file__]
++
++
++def test_config_command(app):
++    app.config["SECRET_KEY"] = "super-secret"
++    app.config["DATABASE_PASSWORD"] = "secret-pass"
++    app.config["API_TOKEN"] = "token-val"
++    app.config["SESSION_KEY"] = "key-val"
++    app.config["TESTING"] = True
++
++    runner = app.test_cli_runner()
++    result = runner.invoke(args=["config"])
++    assert result.exit_code == 0
++    import json
++    data = json.loads(result.output)
++    assert data["SECRET_KEY"] == "***"
++    assert data["DATABASE_PASSWORD"] == "***"
++    assert data["API_TOKEN"] == "***"
++    assert data["SESSION_KEY"] == "***"
++    assert data["TESTING"] is True
++
