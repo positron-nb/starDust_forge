@@ -66,23 +66,83 @@ export function summarize(set: HunkSet): { accepted: number; rejected: number; p
   return c;
 }
 
+export interface EditSpec { old_string?: string; new_string: string; start_line?: number; end_line?: number }
+
+/** Models often copy read_file output verbatim: "  123| code". Strip that prefix if EVERY line has it. */
+export function stripLineNumbers(s: string): string {
+  const lines = s.split('\n');
+  return lines.every(l => /^\s*\d+\| ?/.test(l) || l === '') && lines.some(l => l !== '') ? lines.map(l => l.replace(/^\s*\d+\| ?/, '')).join('\n') : s;
+}
+
 /**
- * Apply search/replace edits to a text. Each old_string must match exactly once
- * (or be empty with the file empty/new). Returns an error the model can act on otherwise.
+ * Apply edits to a text. Two forms (any model can use either):
+ *  - search/replace: old_string must match exactly once. Tolerated, in order: exact match;
+ *    read_file line-number prefixes; trailing-whitespace differences; indentation differences
+ *    (new_string is re-indented by the same offset). Every tier still requires a UNIQUE match.
+ *  - line range: start_line..end_line (1-based, inclusive, numbers of the ORIGINAL file) replaced by
+ *    new_string; line-range edits are applied bottom-up so earlier numbers stay valid.
+ * Errors are phrased so the model can fix the call.
  */
-export function applyEdits(text: string, edits: Array<{ old_string: string; new_string: string }>): { ok: true; text: string } | { ok: false; error: string } {
+export function applyEdits(text: string, edits: EditSpec[]): { ok: true; text: string } | { ok: false; error: string } {
   let cur = text.replace(/\r\n/g, '\n');
-  for (const [i, e] of edits.entries()) {
-    const oldS = e.old_string.replace(/\r\n/g, '\n');
-    const newS = e.new_string.replace(/\r\n/g, '\n');
+  const ranged = edits.map((e, i) => ({ e, i })).filter(x => x.e.start_line !== undefined && !x.e.old_string);
+  const replaces = edits.map((e, i) => ({ e, i })).filter(x => !(x.e.start_line !== undefined && !x.e.old_string));
+
+  // line-range edits first, bottom-up, on the original numbering
+  const lines = cur.split('\n');
+  for (const { e, i } of [...ranged].sort((a, b) => b.e.start_line! - a.e.start_line!)) {
+    const s = e.start_line!, en = e.end_line ?? e.start_line!;
+    if (s < 1 || en < s - 1 || en > lines.length) return { ok: false, error: `edit ${i + 1}: line range ${s}-${en} is outside the file (1-${lines.length}).` };
+    const repl = stripLineNumbers(e.new_string.replace(/\r\n/g, '\n'));
+    lines.splice(s - 1, en - s + 1, ...(repl === '' ? [] : repl.split('\n')));
+  }
+  cur = lines.join('\n');
+
+  for (const { e, i } of replaces) {
+    const oldS = stripLineNumbers((e.old_string ?? '').replace(/\r\n/g, '\n'));
+    let newS = stripLineNumbers(e.new_string.replace(/\r\n/g, '\n'));
     if (oldS === '') {
-      if (cur.trim() !== '') return { ok: false, error: `edit ${i + 1}: old_string is empty but the file is not; give the exact text to replace` };
+      if (cur.trim() !== '') return { ok: false, error: `edit ${i + 1}: old_string is empty but the file is not; give the text to replace, or use start_line/end_line.` };
       cur = newS; continue;
     }
+    // tier 1: exact
     const first = cur.indexOf(oldS);
-    if (first < 0) return { ok: false, error: `edit ${i + 1}: old_string not found in the file. Re-read the file (read_file) and copy the exact current text, including indentation.` };
-    if (cur.indexOf(oldS, first + 1) >= 0) return { ok: false, error: `edit ${i + 1}: old_string occurs more than once; include more surrounding lines to make it unique.` };
-    cur = cur.slice(0, first) + newS + cur.slice(first + oldS.length);
+    if (first >= 0) {
+      if (cur.indexOf(oldS, first + 1) >= 0) return { ok: false, error: `edit ${i + 1}: old_string occurs more than once; include more surrounding lines to make it unique, or use start_line/end_line.` };
+      cur = cur.slice(0, first) + newS + cur.slice(first + oldS.length);
+      continue;
+    }
+    // tiers 2/3: line-wise, ignoring trailing whitespace, then leading indentation
+    const fileLines = cur.split('\n');
+    const want = oldS.replace(/\n+$/, '').split('\n');
+    let applied = false;
+    for (const norm of [(l: string) => l.trimEnd(), (l: string) => l.trim()]) {
+      const target = want.map(norm);
+      const hits: number[] = [];
+      for (let k = 0; k + target.length <= fileLines.length; k++) {
+        if (target.every((t, j) => norm(fileLines[k + j]) === t)) hits.push(k);
+      }
+      if (hits.length > 1) return { ok: false, error: `edit ${i + 1}: old_string matches ${hits.length} places (lines ${hits.map(h => h + 1).join(', ')}); add surrounding lines or use start_line/end_line.` };
+      if (hits.length === 1) {
+        const k = hits[0];
+        const indentOf = (l: string) => /^\s*/.exec(l)![0];
+        const fileIndent = indentOf(fileLines[k]), oldIndent = indentOf(want[0]);
+        if (fileIndent !== oldIndent) {
+          newS = newS.split('\n').map(l => (l.startsWith(oldIndent) ? fileIndent + l.slice(oldIndent.length) : l.trim() === '' ? l : fileIndent + l.trimStart())).join('\n');
+        }
+        fileLines.splice(k, want.length, ...newS.replace(/\n$/, '').split('\n'));
+        cur = fileLines.join('\n');
+        applied = true;
+        break;
+      }
+    }
+    if (!applied) {
+      // help the model: show where the first line of old_string is closest to existing code
+      const firstLine = want.find(l => l.trim())?.trim() ?? '';
+      const near = fileLines.map((l, n) => ({ n: n + 1, l })).filter(x => firstLine && x.l.trim() === firstLine).slice(0, 3);
+      const hint = near.length ? ` The first line occurs at line(s) ${near.map(x => x.n).join(', ')} but the following lines differ.` : '';
+      return { ok: false, error: `edit ${i + 1}: old_string not found in the file.${hint} Re-read the exact lines with read_file, or use start_line/end_line with the line numbers shown by read_file.` };
+    }
   }
   return { ok: true, text: cur };
 }

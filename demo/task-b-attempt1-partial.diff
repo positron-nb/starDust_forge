@@ -1,0 +1,53 @@
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..0005f03d 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -1053,6 +1053,29 @@ def shell_command() -> None:
+     code.interact(banner=banner, local=ctx)
+ 
+ 
++@click.command("config", short_help="Show the config for the app.")
++@with_appcontext
++def config_command() -> None:
++    """Show the configuration for the application.
++
++    Any keys containing 'SECRET', 'PASSWORD', 'TOKEN', or 'KEY'
++    will be masked with '***'.
++    """
++    import json
++    from flask import current_app
++
++    config = dict(current_app.config)
++    masked_config = {}
++
++    for key, value in config.items():
++        if any(mask_word in key.upper() for mask_word in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            masked_config[key] = "***"
++        else:
++            masked_config[key] = value
++
++    click.echo(json.dumps(masked_config, indent=2, sort_keys=True, default=str))
++
++
+ @click.command("routes", short_help="Show the routes for the app.")
+ @click.option(
+     "--sort",
+@@ -1115,16 +1138,8 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
+-cli = FlaskGroup(
+-    name="flask",
+-    help="""\
+-A general utility script for Flask applications.
+-
+-An application to load must be given with the '--app' option,
+-'FLASK_APP' environment variable, or with a 'wsgi.py' or 'app.py' file
+-in the current directory.
+-""",
+-)
++cli.add_command(config_command)
++cli.add_command(config_command)
+ 
+ 
+ def main() -> None:

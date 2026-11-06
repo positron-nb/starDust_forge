@@ -86,6 +86,7 @@ export class AgentRunner {
         if (this.cancelled) return { status: 'cancelled', model };
         let result: RunResult;
         try {
+          let input = firstInput;
           if (!this.sessionId) {
             const { data } = await this.client.sessions.create({
               agent: { spec: { model: { name: model }, instructions: this.opts.spec.instructions,
@@ -93,8 +94,12 @@ export class AgentRunner {
             });
             this.sessionId = data.id;
             hooks.onSession?.({ sessionId: data.id, model });
+          } else if (attempt > 0) {
+            // Same session after a transient error: the request and any tool results are already in
+            // the session history, so ask the agent to continue instead of repeating the request.
+            input = [{ type: 'user.message', content: 'The previous attempt was interrupted by a transient model/provider error. Continue the task from where you left off; do not redo completed steps.' }];
           }
-          result = await this.driveTurns(firstInput, hooks);
+          result = await this.driveTurns(input, hooks);
         } catch (err) {
           if (this.cancelled) return { status: 'cancelled', model };
           result = { status: 'error', error: describe(err) };

@@ -12,8 +12,10 @@ import { proposalKey } from '../changes/changeManager';
 export const proposeEditSchema = {
   path: z.string().describe('Workspace-relative file path (new files are allowed)'),
   edits: z.array(z.object({
-    old_string: z.string().describe('Exact current text to replace (copy it from read_file without line-number prefixes; include enough lines to be unique). Empty string only when creating a new file.'),
+    old_string: z.string().optional().describe('Exact current text to replace (copy from read_file WITHOUT the "  123| " prefixes; include enough lines to be unique). Empty string only when creating a new file.'),
     new_string: z.string().describe('Replacement text'),
+    start_line: z.number().int().min(1).optional().describe('Alternative to old_string: first line to replace (1-based, as shown by read_file)'),
+    end_line: z.number().int().min(0).optional().describe('Last line to replace (inclusive). Use end_line = start_line - 1 to insert before start_line.'),
   })).min(1),
   description: z.string().default('').describe('One line: what this change does and why'),
 };
@@ -21,7 +23,7 @@ export const proposeEditSchema = {
 export function installEditTool(server: McpServer, d: { changes: ChangeManager; onToolCall?: (n: string, a: unknown) => void }): void {
   server.registerTool('propose_edit', {
     title: 'Propose file edit',
-    description: 'Propose changes to ONE file as exact search/replace edits. The user reviews the diff hunk by hunk and the change is applied ' +
+    description: 'Propose changes to ONE file, as search/replace edits (old_string → new_string) or line-range edits (start_line/end_line → new_string). The user reviews the diff hunk by hunk and the change is applied ' +
       'only if (and only as far as) they accept it; the result tells you what was applied or rejected. Group all edits for a file into one call. ' +
       'For a new file use a single edit with old_string "" and the full content as new_string.',
     inputSchema: proposeEditSchema,

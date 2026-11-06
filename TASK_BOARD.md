@@ -17,5 +17,7 @@
 | P4 | Context engine (@file/@symbol, BM25+graph retrieval, budget, reasons, panel table) | TESTED (headless); panel table not yet seen in VS Code |
 | P5 | Inline edit + diff review (hunks, undo, rollback) | IMPLEMENTED (32 unit tests; NOT yet run in VS Code or E2E) |
 | P6 | Fallback, errors, consistency checks | NOT STARTED |
-| P7 | Tasks A/B/C validation | NOT STARTED |
-| P8 | Submission (README, write-up PDF, video script) | NOT STARTED |
+| P7a | Task A headless E2E through TrueForge | VERIFIED (FLASK_DEBUG=off → False; demo/task-a-headless.diff) |
+| P7b | Task B headless | FAILED on free tier (attempt 1: weak edits + quota). Edit tool hardened; rerun needs stronger model/quota |
+| P7c | Task C | fallback verified headlessly (smoke + Task A run); in-editor demo pending |
+| P8 | Submission: README, LICENSE, setup script, write-up draft, demo script | IMPLEMENTED (PDF, video, timestamps pending) |

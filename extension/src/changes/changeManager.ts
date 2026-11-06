@@ -43,7 +43,8 @@ export interface UndoEntry { runId: string; path: string; abs: string; before: s
 
 /** Stable identity of a propose_edit call (same at approval time and at execution time). */
 export function proposalKey(path: string, edits: unknown): string {
-  const norm = Array.isArray(edits) ? edits.map(e => [String((e as { old_string?: unknown }).old_string ?? ''), String((e as { new_string?: unknown }).new_string ?? '')]) : edits;
+  const norm = Array.isArray(edits) ? edits.map(e => { const x = e as { old_string?: unknown; new_string?: unknown; start_line?: unknown; end_line?: unknown };
+    return [String(x.old_string ?? ''), String(x.new_string ?? ''), x.start_line ?? null, x.end_line ?? null]; }) : edits;
   return crypto.createHash('sha256').update(JSON.stringify([path.replace(/\\/g, '/').replace(/^\.?\//, ''), norm])).digest('hex').slice(0, 24);
 }
 

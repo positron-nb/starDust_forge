@@ -1,11 +1,11 @@
 /** Turns propose_edit arguments (from a TrueForge approval pause) into a reviewable Proposal. */
 import type { Workspace } from '../mcp/workspace';
-import { applyEdits } from './hunks';
+import { applyEdits, type EditSpec } from './hunks';
 import { ChangeManager, proposalKey, type FileIO, type Proposal } from './changeManager';
 
 export async function prepareProposal(ws: Workspace, changes: ChangeManager, io: FileIO, args: unknown):
   Promise<{ ok: true; proposal: Proposal } | { ok: false; reason: string }> {
-  const a = args as { path?: string; edits?: Array<{ old_string: string; new_string: string }>; description?: string };
+  const a = args as { path?: string; edits?: EditSpec[]; description?: string };
   if (!a?.path || !Array.isArray(a.edits) || a.edits.length === 0) return { ok: false, reason: 'propose_edit needs "path" and a non-empty "edits" array.' };
   let abs: string, rel: string;
   try { ({ abs, rel } = ws.resolve(a.path)); } catch (e) { return { ok: false, reason: (e as Error).message }; }
