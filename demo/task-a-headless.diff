@@ -1,0 +1,18 @@
+diff --git a/src/flask/helpers.py b/src/flask/helpers.py
+index 5d412c90..96cf860b 100644
+--- a/src/flask/helpers.py
++++ b/src/flask/helpers.py
+@@ -28,9 +28,12 @@ if t.TYPE_CHECKING:  # pragma: no cover
+ def get_debug_flag() -> bool:
+     """Get whether debug mode should be enabled for the app, indicated by the
+     :envvar:`FLASK_DEBUG` environment variable. The default is ``False``.
++
++    The value is considered false if it is "0", "false", "no", "off", or "n"
++    (case-insensitive).
+     """
+     val = os.environ.get("FLASK_DEBUG")
+-    return bool(val and val.lower() not in {"0", "false", "no"})
++    return bool(val and val.lower() not in {"0", "false", "no", "off", "n"})
+ 
+ 
+ def get_load_dotenv(default: bool = True) -> bool:

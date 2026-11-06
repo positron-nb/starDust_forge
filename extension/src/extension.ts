@@ -15,7 +15,8 @@ import { AgentRunner, type ApprovalDecision, type ApprovalRequest } from './true
 import { loadAgentSpec } from './trueforge/agentSpec';
 import { AgentViewProvider } from './ui/agentView';
 import { ReviewController, vscodeIO } from './ui/review';
-import { registerInlineEdit, INLINE_INSTRUCTIONS } from './ui/inlineEdit';
+import { registerInlineEdit } from './ui/inlineEdit';
+import { INLINE_INSTRUCTIONS } from './trueforge/inlinePrompt';
 
 let mcp: EditorMcpServer | undefined;
 

@@ -1,0 +1,2 @@
+inline:src/flask/helpers.py:28-33
+Treat the values 'off' and 'n' as false as well, case-insensitively, and update the docstring to list every value that is treated as false.
