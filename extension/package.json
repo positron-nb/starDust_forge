@@ -1,0 +1,104 @@
+{
+  "name": "forge-agent",
+  "displayName": "Forge Agent (TrueForge coding agent)",
+  "description": "Editor-native coding agent whose loop runs on TrueForge.",
+  "version": "0.1.0",
+  "publisher": "forgeathon",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "forge",
+          "title": "Forge Agent",
+          "icon": "media/forge.svg"
+        }
+      ]
+    },
+    "views": {
+      "forge": [
+        {
+          "type": "webview",
+          "id": "forge.agentView",
+          "name": "Agent"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "forge.cancel",
+        "title": "Forge: Cancel Agent Run"
+      },
+      {
+        "command": "forge.newSession",
+        "title": "Forge: New Session"
+      },
+      {
+        "command": "forge.showSession",
+        "title": "Forge: Open TrueForge Session"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "forge.cancel",
+        "key": "ctrl+shift+escape",
+        "mac": "cmd+shift+escape"
+      }
+    ],
+    "configuration": {
+      "title": "Forge Agent",
+      "properties": {
+        "forge.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:8790",
+          "description": "TrueForge server URL."
+        },
+        "forge.models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "google-gemini/gemini-3-5-flash",
+            "google-gemini/gemini-3-1-flash-lite"
+          ],
+          "description": "Model FQNs configured in TrueForge, in fallback order. The first is primary; on a model error the next one takes over automatically."
+        },
+        "forge.mcpServerName": {
+          "type": "string",
+          "default": "forge-workspace",
+          "description": "Name under which the editor's MCP server is registered in TrueForge."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap",
+    "watch": "npm run build -- --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@truefoundry/trueforge-sdk": "^0.184.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/vscode": "^1.95.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

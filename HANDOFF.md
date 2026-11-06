@@ -1,22 +1,24 @@
 # Handoff
 
-## State (2026-11-06)
-- TrueForge running locally from npx on :8790, started with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'` (required so it can reach our loopback MCP server — see TECHNICAL_RESEARCH.md).
-- `poc/poc.mjs`: registers a localhost Streamable-HTTP MCP server via `client.settings.mcpServers.createOrUpdate` → **VERIFIED** TrueForge lists its `read_file` tool (`GET /api/v1/mcp-servers/forge-poc/tools`).
-- Flask cloned at `flask/`, tag 3.1.3, HEAD `22d924701a6ae2e4cd01e9a15bbaf3946094af65` (VERIFIED).
-- TrueForge source for reference at `research/trueforge` @ 9900d65.
+## State (2026-11-06, end of Phase 2)
+- TrueForge running locally (npx, :8790) with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'`.
+- Models configured in TrueForge: google-gemini (free tier, 5 RPM). Test provider `broken/dead-model` → `http://127.0.0.1:9/v1` (for Task C).
+- `extension/` builds (`npm run build`), typechecks, 8 unit tests pass (`npx vitest run`).
+- Headless smoke (`extension/scripts/smoke.ts`) VERIFIED: automatic fallback broken→gemini, 429 retry honouring hint, agent discovers get_debug_flag via our MCP tools on Flask, cancel → 'cancelled' in ~4s.
+- Agent definition: `agent/forge-coder.json` (snake_case HTTP format; converted in `src/trueforge/agentSpec.ts`).
+- Flask at `flask/` @ 22d92470.
 
-## Pending human actions
-1. ~~PDF~~ done (problem_statement.pdf, gitignored).
-2. ~~Model~~ done: google-gemini (free tier) configured.
+## Not yet done / unverified
+- Extension never launched inside VS Code yet (panel UI unverified visually).
+- Tools still read-only: no find_symbol/get_context/propose_edit/run_command; approvals are auto-denied.
 
 ## Commands
 ```bash
 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx -y @truefoundry/trueforge@latest
-cd poc && node poc.mjs <provider/model>      # full PoC turn
+cd extension && npm run build && npx vitest run
+npx esbuild scripts/smoke.ts --bundle --platform=node --format=cjs --outfile=out/smoke.js && node out/smoke.js ../flask google-gemini/gemini-3-5-flash,google-gemini/gemini-3-1-flash-lite
 ```
 
 ## Next steps
-1. Run PoC turn with real model → verify streaming + tool call + turn.done.
-2. Probe failure surface with invalid key / unreachable custom endpoint.
-3. Scaffold `extension/` (Phase 2).
+1. Human: launch extension (F5 / Extension Development Host) on flask/ and check the panel.
+2. Phase 3: find_symbol, run_command (approval-gated). Phase 4: get_context engine. Phase 5: propose_edit + hunk review driven by tool.approval_required.
