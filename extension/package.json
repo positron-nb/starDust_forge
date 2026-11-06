@@ -79,6 +79,18 @@
           "type": "string",
           "default": "forge-workspace",
           "description": "Name under which the editor's MCP server is registered in TrueForge."
+        },
+        "forge.autoApproveCommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "^(python -m )?pytest(\\s|$)",
+            "^flask( --app \\S+)? (--help|routes|config)\b",
+            "^git (status|diff|log)\b"
+          ],
+          "description": "Regexes for commands the agent may run without a confirmation prompt (TrueForge still pauses; the extension approves). Everything else asks."
         }
       }
     }

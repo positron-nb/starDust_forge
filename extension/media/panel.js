@@ -57,6 +57,29 @@
       case 'session': $('model').textContent = m.model; const a = $('session'); a.hidden = false; a.dataset.url = m.url; a.title = m.sessionId; break;
       case 'running': $('send').disabled = m.running; $('cancel').disabled = !m.running; document.body.classList.toggle('running', m.running); break;
       case 'usage': $('usage').textContent = m.text; break;
+      case 'context': {
+        // Live view of the context engine: which files/symbols were chosen, why, and the budget.
+        const d = document.createElement('details'); d.className = 'context'; d.open = true;
+        const pct = Math.round(100 * m.used / m.budget);
+        d.innerHTML = '<summary></summary><div class="bar"><span></span></div><table></table><div class="stats"></div>';
+        d.querySelector('summary').textContent = '📚 Context selected for "' + (m.query.length > 60 ? m.query.slice(0, 60) + '…' : m.query) + '" — ' + m.items.length + ' items, ' + m.used + '/' + m.budget + ' tokens';
+        d.querySelector('.bar span').style.width = pct + '%';
+        const t = d.querySelector('table');
+        for (const it of m.items) {
+          const tr = document.createElement('tr');
+          const a = document.createElement('td'); a.className = 'loc'; a.textContent = it.file + ':' + it.start + (it.symbol === '(outline)' ? ' (outline)' : ' ' + it.symbol);
+          const b = document.createElement('td'); b.className = 'tok'; b.textContent = it.tokens + 't';
+          const c = document.createElement('td'); c.className = 'why'; c.textContent = it.why;
+          tr.append(a, b, c); t.appendChild(tr);
+        }
+        d.querySelector('.stats').textContent = m.stats;
+        container('main').appendChild(d);
+        break;
+      }
+      case 'mentions': {
+        const d = el('note info', '📌 ' + m.items.map(i => '@' + i.kind + ':' + i.ref + (i.resolved ? ' → ' + i.detail : ' ✗ ' + i.detail)).join('   '));
+        log.appendChild(d); break;
+      }
     }
     scroll();
   });

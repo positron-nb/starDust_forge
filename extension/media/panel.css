@@ -27,3 +27,15 @@ body.running #status::before { content: '● '; color: var(--vscode-progressBar-
 main, .msg, .note, #status, details.tool pre { overflow-wrap: anywhere; word-break: break-word; }
 main { overflow-x: hidden; }
 #status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+details.context { margin: 6px 0; border: 1px solid var(--vscode-textLink-foreground); border-radius: 4px; padding: 4px 6px; font-size: 11px; }
+details.context summary { cursor: pointer; font-weight: 600; }
+details.context .bar { height: 4px; background: var(--vscode-input-background); margin: 4px 0; }
+details.context .bar span { display: block; height: 100%; background: var(--vscode-textLink-foreground); }
+details.context table { width: 100%; border-collapse: collapse; }
+details.context td { vertical-align: top; padding: 2px 4px; border-top: 1px solid var(--vscode-panel-border); }
+details.context td.loc { font-family: var(--vscode-editor-font-family); white-space: nowrap; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+details.context td.tok { opacity: .7; white-space: nowrap; }
+details.context td.why { opacity: .85; }
+details.context .stats { opacity: .6; margin-top: 4px; }
+.note.info { background: var(--vscode-textBlockQuote-background); }

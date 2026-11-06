@@ -13,8 +13,8 @@
 | P1.4 | PoC: TrueForge calls localhost MCP tool | VERIFIED |
 | P1.5 | PoC: failure surface for Task C | VERIFIED |
 | P2 | Extension foundation (panel, client, streaming, cancel, fallback) | TESTED (headless smoke + 10 unit tests; panel VERIFIED in VS Code by user) |
-| P3 | Workspace MCP tools | NOT STARTED |
-| P4 | Context engine (@file/@symbol, retrieval, budget, explanations) | NOT STARTED |
+| P3 | Workspace MCP tools (read/list/search/find_symbol/get_context/run_command) | TESTED (19 unit tests + headless E2E on Flask) |
+| P4 | Context engine (@file/@symbol, BM25+graph retrieval, budget, reasons, panel table) | TESTED (headless); panel table not yet seen in VS Code |
 | P5 | Inline edit + diff review (hunks, undo, rollback) | NOT STARTED |
 | P6 | Fallback, errors, consistency checks | NOT STARTED |
 | P7 | Tasks A/B/C validation | NOT STARTED |

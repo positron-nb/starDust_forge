@@ -16,7 +16,16 @@ type ToWebview =
   | { kind: 'status'; text: string; level: string }
   | { kind: 'session'; sessionId: string; model: string; url: string }
   | { kind: 'running'; running: boolean }
-  | { kind: 'usage'; text: string };
+  | { kind: 'usage'; text: string }
+  | { kind: 'context'; query: string; used: number; budget: number; stats: string; items: Array<{ file: string; symbol: string; start: number; end: number; score: number; tokens: number; why: string }> }
+  | { kind: 'mentions'; items: Array<{ ref: string; kind: string; resolved: boolean; detail: string }> };
+
+export interface ViewHooks {
+  /** Resolve @file/@symbol mentions into pinned context before the turn is sent. */
+  prepare?(text: string): Promise<{ message: string; mentions: Array<{ ref: string; kind: string; resolved: boolean; detail: string }> }>;
+  /** Extra cancellation work (kill running commands, drop pending proposals). */
+  onCancel?(): void;
+}
 
 export class AgentViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
@@ -27,6 +36,7 @@ export class AgentViewProvider implements vscode.WebviewViewProvider {
     private readonly getRunner: () => Promise<AgentRunner>,
     private readonly baseUrl: () => string,
     private readonly approve: (req: ApprovalRequest) => Promise<ApprovalDecision>,
+    private readonly hooks: ViewHooks = {},
   ) {}
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -52,6 +62,7 @@ export class AgentViewProvider implements vscode.WebviewViewProvider {
   async cancel(): Promise<void> {
     if (!this.running) return;
     this.post({ kind: 'status', text: 'Cancelling…', level: 'warn' });
+    this.hooks.onCancel?.();
     await (await this.getRunner()).cancel();
   }
 
@@ -62,7 +73,13 @@ export class AgentViewProvider implements vscode.WebviewViewProvider {
     this.post({ kind: 'user', text });
     try {
       const runner = await this.getRunner();
-      const result = await runner.run(text, {
+      let message = text;
+      if (this.hooks.prepare) {
+        const p = await this.hooks.prepare(text);
+        message = p.message;
+        if (p.mentions.length) this.post({ kind: 'mentions', items: p.mentions });
+      }
+      const result = await runner.run(message, {
         onEvent: (e, merged) => this.render(e, merged),
         onStatus: (t, level = 'info') => this.post({ kind: 'status', text: t, level }),
         onSession: ({ sessionId, model }) => this.post({ kind: 'session', sessionId, model, url: `${this.baseUrl()}/sessions/${sessionId}` }),

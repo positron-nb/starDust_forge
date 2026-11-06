@@ -3,6 +3,11 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { EditorMcpServer } from './mcp/server';
 import { installReadTools } from './mcp/tools';
+import { installContextTools } from './mcp/contextTools';
+import { installCommandTool, killAllCommands } from './mcp/commandTool';
+import { ContextIndex } from './context/index';
+import { resolveMentions } from './context/mentions';
+import type { ApprovalDecision, ApprovalRequest } from './trueforge/agentRunner';
 import { Workspace } from './mcp/workspace';
 import { AgentRunner } from './trueforge/agentRunner';
 import { loadAgentSpec } from './trueforge/agentSpec';
@@ -19,8 +24,19 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   if (!folder) { log('No workspace folder open; Forge Agent is idle.'); return; }
   const ws = new Workspace(folder.uri.fsPath);
 
+  const index = new ContextIndex(ws);
+  void index.refresh().then(() => log(`Indexed ${index.fileCount} files / ${index.chunkCount} symbols in ${index.lastRefreshMs}ms`));
+  const onToolCall = (n: string, a: unknown) => log(`tool ${n} ${JSON.stringify(a)}`);
+  let view: AgentViewProvider;
+
   mcp = new EditorMcpServer(server => {
-    installReadTools(server, { ws, rgPath: findRipgrep(), onToolCall: (n, a) => log(`tool ${n} ${JSON.stringify(a)}`) });
+    installContextTools(server, { index, onToolCall, onContext: r => view?.post({
+      kind: 'context', query: r.query, used: r.used, budget: r.budget,
+      stats: `index: ${r.stats.files} files, ${r.stats.chunks} symbols · ${r.stats.candidates} candidates ranked · ${r.skipped.length} dropped (budget/per-file cap)`,
+      items: r.items.map(i => ({ file: i.file, symbol: i.symbol, start: i.start, end: i.end, score: i.score, tokens: i.tokens, why: i.reasons.join('; ') })),
+    }) });
+    installReadTools(server, { ws, rgPath: findRipgrep(), onToolCall });
+    installCommandTool(server, { ws, onToolCall });
   }, log);
   await mcp.start();
 
@@ -45,8 +61,30 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     return runner;
   };
 
-  const view = new AgentViewProvider(ctx, getRunner, () => cfg().get<string>('baseUrl', 'http://localhost:8790'),
-    async req => ({ allow: false, reason: `No reviewer for ${req.toolName} yet.` }));
+  /** Answers TrueForge approval pauses. Commands: allow-list or modal prompt. */
+  const approve = async (req: ApprovalRequest): Promise<ApprovalDecision> => {
+    if (req.toolName === 'run_command') {
+      const cmd = String((req.args as { command?: string })?.command ?? '');
+      const allow = cfg().get<string[]>('autoApproveCommands', []);
+      if (allow.some(p => { try { return new RegExp(p).test(cmd); } catch { return false; } })) {
+        view.post({ kind: 'status', text: `Auto-approved command (matches forge.autoApproveCommands): ${cmd}`, level: 'info' });
+        return { allow: true };
+      }
+      const pick = await vscode.window.showWarningMessage(`Forge agent wants to run:
+
+${cmd}`, { modal: true }, 'Run', 'Deny');
+      return pick === 'Run' ? { allow: true } : { allow: false, reason: 'The user denied this command.' };
+    }
+    return { allow: false, reason: `No reviewer for ${req.toolName} yet.` };
+  };
+
+  view = new AgentViewProvider(ctx, getRunner, () => cfg().get<string>('baseUrl', 'http://localhost:8790'), approve, {
+    prepare: async text => {
+      const r = await resolveMentions(index, text, 5000);
+      return { message: r.message, mentions: r.mentions.map(m => ({ ref: m.ref, kind: m.kind, resolved: m.resolved, detail: m.detail })) };
+    },
+    onCancel: () => killAllCommands(),
+  });
 
   ctx.subscriptions.push(
     out,
@@ -63,7 +101,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   log(`Forge Agent active for ${ws.root}`);
 }
 
-export async function deactivate(): Promise<void> { await mcp?.stop(); }
+export async function deactivate(): Promise<void> { killAllCommands(); await mcp?.stop(); }
 
 /** VS Code ships ripgrep; prefer it, fall back to rg on PATH. */
 function findRipgrep(): string {
