@@ -37,6 +37,10 @@
     },
     "commands": [
       {
+        "command": "forge.inlineEdit",
+        "title": "Forge: Inline Edit Selection"
+      },
+      {
         "command": "forge.cancel",
         "title": "Forge: Cancel Agent Run"
       },
@@ -47,13 +51,68 @@
       {
         "command": "forge.showSession",
         "title": "Forge: Open TrueForge Session"
+      },
+      {
+        "command": "forge.undoLast",
+        "title": "Forge: Undo Last Applied Change"
+      },
+      {
+        "command": "forge.undoRun",
+        "title": "Forge: Undo Agent Run"
+      },
+      {
+        "command": "forge.review.acceptHunk",
+        "title": "Forge: Accept Hunk",
+        "icon": "$(check)"
+      },
+      {
+        "command": "forge.review.rejectHunk",
+        "title": "Forge: Reject Hunk",
+        "icon": "$(close)"
+      },
+      {
+        "command": "forge.review.acceptAll",
+        "title": "Forge: Accept All Hunks",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "forge.review.rejectAll",
+        "title": "Forge: Reject All Hunks",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "forge.review.apply",
+        "title": "Forge: Apply Review Decisions",
+        "icon": "$(pass-filled)"
       }
     ],
     "keybindings": [
       {
+        "command": "forge.inlineEdit",
+        "key": "ctrl+alt+e",
+        "mac": "cmd+alt+e",
+        "when": "editorTextFocus && !editorReadonly"
+      },
+      {
         "command": "forge.cancel",
         "key": "ctrl+shift+escape",
         "mac": "cmd+shift+escape"
+      },
+      {
+        "command": "forge.review.acceptHunk",
+        "key": "alt+y",
+        "when": "resourceScheme == forge-review"
+      },
+      {
+        "command": "forge.review.rejectHunk",
+        "key": "alt+n",
+        "when": "resourceScheme == forge-review"
+      },
+      {
+        "command": "forge.review.apply",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "resourceScheme == forge-review"
       }
     ],
     "configuration": {
@@ -93,6 +152,64 @@
           "description": "Regexes for commands the agent may run without a confirmation prompt (TrueForge still pauses; the extension approves). Everything else asks."
         }
       }
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "command": "forge.review.acceptHunk",
+          "when": "resourceScheme == forge-review",
+          "group": "navigation@1"
+        },
+        {
+          "command": "forge.review.rejectHunk",
+          "when": "resourceScheme == forge-review",
+          "group": "navigation@2"
+        },
+        {
+          "command": "forge.review.acceptAll",
+          "when": "resourceScheme == forge-review",
+          "group": "navigation@3"
+        },
+        {
+          "command": "forge.review.rejectAll",
+          "when": "resourceScheme == forge-review",
+          "group": "navigation@4"
+        },
+        {
+          "command": "forge.review.apply",
+          "when": "resourceScheme == forge-review",
+          "group": "navigation@5"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "forge.inlineEdit",
+          "when": "editorHasSelection",
+          "group": "1_modification"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "forge.review.acceptHunk",
+          "when": "resourceScheme == forge-review"
+        },
+        {
+          "command": "forge.review.rejectHunk",
+          "when": "resourceScheme == forge-review"
+        },
+        {
+          "command": "forge.review.acceptAll",
+          "when": "resourceScheme == forge-review"
+        },
+        {
+          "command": "forge.review.rejectAll",
+          "when": "resourceScheme == forge-review"
+        },
+        {
+          "command": "forge.review.apply",
+          "when": "resourceScheme == forge-review"
+        }
+      ]
     }
   },
   "scripts": {
@@ -104,6 +221,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@truefoundry/trueforge-sdk": "^0.184.1",
+    "diff": "^8.0.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {

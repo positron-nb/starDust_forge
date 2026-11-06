@@ -15,7 +15,7 @@
 | P2 | Extension foundation (panel, client, streaming, cancel, fallback) | TESTED (headless smoke + 10 unit tests; panel VERIFIED in VS Code by user) |
 | P3 | Workspace MCP tools (read/list/search/find_symbol/get_context/run_command) | TESTED (19 unit tests + headless E2E on Flask) |
 | P4 | Context engine (@file/@symbol, BM25+graph retrieval, budget, reasons, panel table) | TESTED (headless); panel table not yet seen in VS Code |
-| P5 | Inline edit + diff review (hunks, undo, rollback) | NOT STARTED |
+| P5 | Inline edit + diff review (hunks, undo, rollback) | IMPLEMENTED (32 unit tests; NOT yet run in VS Code or E2E) |
 | P6 | Fallback, errors, consistency checks | NOT STARTED |
 | P7 | Tasks A/B/C validation | NOT STARTED |
 | P8 | Submission (README, write-up PDF, video script) | NOT STARTED |

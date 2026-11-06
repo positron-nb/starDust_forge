@@ -5,7 +5,7 @@
  */
 import * as vscode from 'vscode';
 import type { TrueForgeApi } from '@truefoundry/trueforge-sdk';
-import type { AgentRunner, ApprovalDecision, ApprovalRequest } from '../trueforge/agentRunner';
+import type { AgentRunner, ApprovalDecision, ApprovalRequest, RunResult } from '../trueforge/agentRunner';
 
 type ToWebview =
   | { kind: 'user'; text: string }
@@ -18,13 +18,21 @@ type ToWebview =
   | { kind: 'running'; running: boolean }
   | { kind: 'usage'; text: string }
   | { kind: 'context'; query: string; used: number; budget: number; stats: string; items: Array<{ file: string; symbol: string; start: number; end: number; score: number; tokens: number; why: string }> }
-  | { kind: 'mentions'; items: Array<{ ref: string; kind: string; resolved: boolean; detail: string }> };
+  | { kind: 'mentions'; items: Array<{ ref: string; kind: string; resolved: boolean; detail: string }> }
+  | { kind: 'review'; id: string; path: string; description: string; status: string; isNew: boolean;
+      hunks: Array<{ index: number; origStart: number; newStart: number; removed: string[]; added: string[]; state: string }> };
 
 export interface ViewHooks {
   /** Resolve @file/@symbol mentions into pinned context before the turn is sent. */
   prepare?(text: string): Promise<{ message: string; mentions: Array<{ ref: string; kind: string; resolved: boolean; detail: string }> }>;
   /** Extra cancellation work (kill running commands, drop pending proposals). */
   onCancel?(): void;
+  /** Start of a run; returns a run id used to group applied changes for undo. */
+  onRunStart?(label: string): string;
+  /** e.g. "Applied changes to 3 files (Forge: Undo Agent Run to revert)." */
+  appliedSummary?(runId?: string): string;
+  /** Messages from the panel's review card / undo buttons. */
+  onPanelCommand?(m: { kind: string; id?: string; index?: number; action?: string }): void;
 }
 
 export class AgentViewProvider implements vscode.WebviewViewProvider {
@@ -48,6 +56,7 @@ export class AgentViewProvider implements vscode.WebviewViewProvider {
       if (m.kind === 'cancel') await this.cancel();
       if (m.kind === 'new') await this.newSession();
       if (m.kind === 'open' && m.url) void vscode.env.openExternal(vscode.Uri.parse(m.url));
+      if (m.kind === 'review' || m.kind === 'undo') this.hooks.onPanelCommand?.(m as never);
     });
   }
 
@@ -59,41 +68,56 @@ export class AgentViewProvider implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage({ kind: 'clear' });
   }
 
+  private activeRunner?: AgentRunner;
+  get isRunning(): boolean { return this.running; }
+
   async cancel(): Promise<void> {
     if (!this.running) return;
     this.post({ kind: 'status', text: 'Cancelling…', level: 'warn' });
     this.hooks.onCancel?.();
-    await (await this.getRunner()).cancel();
+    await this.activeRunner?.cancel();
   }
 
   async send(text: string): Promise<void> {
-    if (this.running) { this.post({ kind: 'status', text: 'A run is already in progress. Cancel it first.', level: 'warn' }); return; }
+    let message = text;
+    let mentions: Array<{ ref: string; kind: string; resolved: boolean; detail: string }> = [];
+    if (this.hooks.prepare) ({ message, mentions } = await this.hooks.prepare(text));
+    await this.runTask(await this.getRunner().catch(err => { this.post({ kind: 'status', text: (err as Error).message, level: 'error' }); return undefined; }),
+      text, message, 'agent', mentions);
+  }
+
+  /** Shared by the agent panel and inline edit: one run at a time, fully cancellable. */
+  async runTask(runner: AgentRunner | undefined, shown: string, message: string, label: 'agent' | 'inline',
+    mentions: Array<{ ref: string; kind: string; resolved: boolean; detail: string }> = [],
+    onProgress?: (s: string) => void): Promise<RunResult | undefined> {
+    if (!runner) return undefined;
+    if (this.running) { this.post({ kind: 'status', text: 'A run is already in progress. Cancel it first.', level: 'warn' }); return undefined; }
     this.running = true;
+    this.activeRunner = runner;
     this.post({ kind: 'running', running: true });
-    this.post({ kind: 'user', text });
+    this.post({ kind: 'user', text: shown });
+    if (mentions.length) this.post({ kind: 'mentions', items: mentions });
+    const runId = this.hooks.onRunStart?.(label);
+    let result: RunResult | undefined;
     try {
-      const runner = await this.getRunner();
-      let message = text;
-      if (this.hooks.prepare) {
-        const p = await this.hooks.prepare(text);
-        message = p.message;
-        if (p.mentions.length) this.post({ kind: 'mentions', items: p.mentions });
-      }
-      const result = await runner.run(message, {
-        onEvent: (e, merged) => this.render(e, merged),
-        onStatus: (t, level = 'info') => this.post({ kind: 'status', text: t, level }),
+      result = await runner.run(message, {
+        onEvent: (e, merged) => { this.render(e, merged); if (e.type === 'model.message.delta') onProgress?.('streaming…'); },
+        onStatus: (t, level = 'info') => { this.post({ kind: 'status', text: t, level }); onProgress?.(t); },
         onSession: ({ sessionId, model }) => this.post({ kind: 'session', sessionId, model, url: `${this.baseUrl()}/sessions/${sessionId}` }),
-        onApproval: this.approve,
+        onApproval: req => { onProgress?.(`waiting for your review (${req.toolName})`); return this.approve(req); },
       });
-      if (result.status === 'cancelled') this.post({ kind: 'status', text: 'Run cancelled. No pending changes were applied; the workspace is unchanged.', level: 'warn' });
-      else if (result.status === 'error') this.post({ kind: 'status', text: `Run failed: ${result.error}. The workspace is unchanged.`, level: 'error' });
-      else this.post({ kind: 'status', text: `Done (model: ${result.model}).`, level: 'info' });
+      const applied = this.hooks.appliedSummary?.(runId) ?? '';
+      if (result.status === 'cancelled') this.post({ kind: 'status', text: `Run cancelled. Unreviewed and unapplied edits were discarded. ${applied || 'The workspace is unchanged.'}`, level: 'warn' });
+      else if (result.status === 'error') this.post({ kind: 'status', text: `Run failed: ${result.error} ${applied || 'The workspace is unchanged.'}`, level: 'error' });
+      else this.post({ kind: 'status', text: `Done (model: ${result.model}). ${applied}`, level: 'info' });
     } catch (err) {
       this.post({ kind: 'status', text: `Unexpected error: ${(err as Error).message}`, level: 'error' });
     } finally {
       this.running = false;
+      this.activeRunner = undefined;
       this.post({ kind: 'running', running: false });
     }
+    return result;
   }
 
   private render(e: TrueForgeApi.TurnStreamingEvent, merged?: TrueForgeApi.TurnStreamingEvent): void {

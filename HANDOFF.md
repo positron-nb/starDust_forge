@@ -22,3 +22,8 @@ npx esbuild scripts/smoke.ts --bundle --platform=node --format=cjs --outfile=out
 ## Next steps
 1. Human: launch extension (F5 / Extension Development Host) on flask/ and check the panel.
 2. Phase 3: find_symbol, run_command (approval-gated). Phase 4: get_context engine. Phase 5: propose_edit + hunk review driven by tool.approval_required.
+
+## Update (Phase 5 implemented, unverified in editor)
+- propose_edit (approval-gated) → ReviewController diff + per-hunk Alt+Y/Alt+N, CodeLens, panel review card → ChangeManager writes only accepted hunks; undo (forge.undoLast / forge.undoRun); cancel drops unapplied approvals.
+- Inline edit: Ctrl+Alt+E (src/ui/inlineEdit.ts).
+- NEXT: (1) headless E2E of Task A edit; (2) user tests Ctrl+Alt+E on get_debug_flag in VS Code; (3) Task B rehearsal; (4) Phase 6-8.

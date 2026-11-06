@@ -39,3 +39,15 @@ details.context td.tok { opacity: .7; white-space: nowrap; }
 details.context td.why { opacity: .85; }
 details.context .stats { opacity: .6; margin-top: 4px; }
 .note.info { background: var(--vscode-textBlockQuote-background); }
+
+.review { margin: 8px 0; border: 1px solid var(--vscode-focusBorder); border-radius: 4px; padding: 6px; font-size: 12px; }
+.rv-head { font-weight: 600; margin-bottom: 4px; }
+.rv-desc { opacity: .8; margin-bottom: 4px; }
+.hunk { border-left: 3px solid var(--vscode-editorInfo-foreground); margin: 6px 0; padding-left: 6px; }
+.hunk.accepted { border-left-color: var(--vscode-testing-iconPassed); }
+.hunk.rejected { border-left-color: var(--vscode-testing-iconFailed); opacity: .55; }
+.hunk pre { margin: 2px 0; white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; max-height: 220px; overflow: auto; }
+.review button { padding: 2px 8px; font-size: 11px; }
+.review button.on { outline: 2px solid var(--vscode-focusBorder); }
+.review button.primary { margin-left: auto; }
+.rv-state { font-size: 10px; opacity: .7; text-transform: uppercase; }

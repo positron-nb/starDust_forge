@@ -76,6 +76,40 @@
         container('main').appendChild(d);
         break;
       }
+      case 'review': {
+        // Review card: mirrors the diff editor; per-hunk accept/reject, apply, undo.
+        let card = document.getElementById('rv-' + m.id);
+        if (!card) { card = document.createElement('div'); card.id = 'rv-' + m.id; card.className = 'review'; container('main').appendChild(card); }
+        card.innerHTML = '';
+        const counts = { accepted: 0, rejected: 0, pending: 0 }; m.hunks.forEach(h => counts[h.state]++);
+        const head = document.createElement('div'); head.className = 'rv-head';
+        head.textContent = '📝 ' + m.path + (m.isNew ? ' (new file)' : '') + ' — ' + m.hunks.length + ' hunk(s) · ' + m.status.toUpperCase() +
+          (m.status === 'reviewing' ? ' · ' + counts.accepted + '✓ ' + counts.rejected + '✗ ' + counts.pending + ' pending' : '');
+        card.appendChild(head);
+        if (m.description) card.appendChild(el('rv-desc', m.description));
+        const btn = (label, action, extra, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls;
+          b.onclick = () => vscode.postMessage(Object.assign({ kind: 'review', id: m.id, action }, extra || {})); return b; };
+        for (const h of m.hunks) {
+          const box = document.createElement('div'); box.className = 'hunk ' + h.state;
+          const pre = document.createElement('pre');
+          const NL = String.fromCharCode(10);
+          const minus = h.removed.slice(0, 12).map(l => '- ' + l).concat(h.removed.length > 12 ? ['- …'] : []);
+          const plus = h.added.slice(0, 12).map(l => '+ ' + l).concat(h.added.length > 12 ? ['+ …'] : []);
+          pre.textContent = ['@@ line ' + h.origStart].concat(minus, plus).join(NL);
+          box.appendChild(pre);
+          if (m.status === 'reviewing') {
+            const row = document.createElement('div'); row.className = 'row';
+            row.append(btn('✓ Accept', 'accept', { index: h.index }, h.state === 'accepted' ? 'on' : ''), btn('✗ Reject', 'reject', { index: h.index }, h.state === 'rejected' ? 'on' : ''));
+            box.appendChild(row);
+          } else box.appendChild(el('rv-state', h.state));
+          card.appendChild(box);
+        }
+        const row = document.createElement('div'); row.className = 'row';
+        if (m.status === 'reviewing') row.append(btn('Accept all', 'acceptAll'), btn('Reject all', 'rejectAll'), btn('Open diff', 'open'), btn('Apply decisions', 'apply', null, 'primary'));
+        if (m.status === 'applied') { const u = document.createElement('button'); u.textContent = '↶ Undo agent run'; u.onclick = () => vscode.postMessage({ kind: 'undo', action: 'run' }); row.append(u); }
+        card.appendChild(row);
+        break;
+      }
       case 'mentions': {
         const d = el('note info', '📌 ' + m.items.map(i => '@' + i.kind + ':' + i.ref + (i.resolved ? ' → ' + i.detail : ' ✗ ' + i.detail)).join('   '));
         log.appendChild(d); break;
