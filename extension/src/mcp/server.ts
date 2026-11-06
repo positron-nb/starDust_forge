@@ -61,6 +61,8 @@ export class EditorMcpServer {
   }
 
   async stop(): Promise<void> {
+    // closeAllConnections: TrueForge keeps HTTP connections alive; without it close() never resolves.
+    this.httpServer?.closeAllConnections();
     await new Promise<void>(r => (this.httpServer ? this.httpServer.close(() => r()) : r()));
   }
 }
