@@ -1,0 +1,11 @@
+research/
+flask/
+.trueforge-data/
+node_modules/
+poc/fixture/
+*.vsix
+out/
+.env
+config/models.json
+problem_statement.pdf
+problem_statement.txt
