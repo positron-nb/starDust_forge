@@ -1,0 +1,78 @@
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..21e9c0e2 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -1115,6 +1115,28 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the config as JSON.
++
++    Values for any key containing SECRET, PASSWORD, TOKEN or KEY are masked
++    as '***'.
++    """
++    import json
++    
++    def _json_encoder(obj: t.Any) -> t.Any:
++        if hasattr(obj, "isoformat"):
++            return obj.isoformat()
++        return str(obj)
++
++    out = {
++        k: "***" if any(x in k for x in ("SECRET", "PASSWORD", "TOKEN", "KEY")) else v
++        for k, v in current_app.config.items()
++    }
++    click.echo(json.dumps(out, indent=2, sort_keys=True, default=_json_encoder))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+@@ -1125,6 +1147,10 @@ An application to load must be given with the '--app' option,
+ in the current directory.
+ """,
+ )
++cli.add_command(run_command)
++cli.add_command(shell_command)
++cli.add_command(routes_command)
++cli.add_command(config_command)
+ 
+ 
+ def main() -> None:
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..cd74c45a 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -395,6 +395,29 @@ def test_flaskgroup_nested(app, runner):
+     assert result.output == "flask_test\n"
+ 
+ 
++def test_config_command():
++    from flask import Flask
++    from flask.cli import ScriptInfo
++    app = Flask("test")
++    app.config["SECRET_KEY"] = "secret"
++    app.config["PASSWORD"] = "password"
++    app.config["DATABASE_URL"] = "sqlite:///:memory:"
++    app.config["TOKEN"] = "token"
++    app.config["TEST_KEY"] = "value"
++    
++    from flask.cli import cli
++    runner = app.test_cli_runner()
++    # The runner needs to be told to use this app.
++    # Actually, ScriptInfo is what `flask` uses to load the app.
++    result = runner.invoke(cli, args=["config"], obj=ScriptInfo(create_app=lambda: app))
++    assert result.exit_code == 0
++    assert '"SECRET_KEY": "***"' in result.output
++    assert '"PASSWORD": "***"' in result.output
++    assert '"DATABASE_URL": "sqlite:///:memory:"' in result.output
++    assert '"TOKEN": "***"' in result.output
++    assert '"TEST_KEY": "value"' in result.output
++
++
+ def test_no_command_echo_loading_error():
+     from flask.cli import cli
+ 
