@@ -164,6 +164,18 @@
           "type": "number",
           "default": 0,
           "markdownDescription": "TrueForge compaction trigger in estimated input tokens (0 = TrueForge default: 80% of the model context). Set e.g. 12000 for free tiers with per-minute token limits."
+        },
+        "forge.reasoningEffort": {
+          "type": "string",
+          "enum": [
+            "",
+            "none",
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "",
+          "markdownDescription": "Reasoning effort sent to the model through TrueForge (`params.reasoning_effort`). `none` turns off thinking on local Ollama models so output-token limits are spent on tool calls. Empty = provider default."
         }
       }
     },

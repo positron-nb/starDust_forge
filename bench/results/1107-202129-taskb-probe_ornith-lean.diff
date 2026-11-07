@@ -1,0 +1,71 @@
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..ab352911 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -4,6 +4,7 @@ import ast
+ import collections.abc as cabc
+ import importlib.metadata
+ import inspect
++import json
+ import os
+ import platform
+ import re
+@@ -560,6 +561,8 @@ class FlaskGroup(AppGroup):
+         from :file:`.env` and :file:`.flaskenv` files.
+     """
+ 
++    _is_config_command_registered: bool = False
++
+     def __init__(
+         self,
+         add_default_commands: bool = True,
+@@ -1115,6 +1118,41 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++
++@pass_script_info
++def config_command() -> None:
++    """Print the loaded application's configuration as JSON.
++
++    Values of keys containing SECRET, PASSWORD, TOKEN, or KEY
++    are masked as "***".
++    """
++    config = current_app.config
++    masked = {}
++    for key, value in config.items():
++        if any(term in key for term in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            masked[key] = "***"
++        else:
++            masked[key] = value
++    click.echo(json.dumps(masked, indent=2, sort_keys=True))
++
++
++@pass_script_info
++def config_command() -> None:
++    """Print the loaded application's configuration as JSON.
++
++    Values of keys containing SECRET, PASSWORD, TOKEN, or KEY
++    are masked as "***".
++    """
++    config = current_app.config
++    masked = {}
++    for key, value in config.items():
++        if any(term in key for term in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            masked[key] = "***"
++        else:
++            masked[key] = value
++    click.echo(json.dumps(masked, indent=2, sort_keys=True))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+@@ -1131,5 +1169,7 @@ def main() -> None:
+     cli.main()
+ 
+ 
++cli.add_command(config_command)
++
+ if __name__ == "__main__":
+     main()

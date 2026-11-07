@@ -26,7 +26,7 @@ export function toCamel(v: unknown): unknown {
 }
 
 export type AgentProfile = 'full' | 'lean';
-export interface SpecOptions { profile?: AgentProfile; compactAt?: number }
+export interface SpecOptions { profile?: AgentProfile; compactAt?: number; reasoningEffort?: string }
 
 export function loadAgentSpec(mcpServerName: string, extraInstructions = '', opts: SpecOptions = {}): AgentSpec {
   const m = toCamel(structuredClone(agentDef.manifest)) as { instructions: string; mcpServers: Array<Record<string, unknown>>; config: Record<string, any> };
@@ -44,5 +44,6 @@ export function loadAgentSpec(mcpServerName: string, extraInstructions = '', opt
     instructions: m.instructions + (extraInstructions ? `\n\n${extraInstructions}` : ''),
     mcpServers,
     config,
+    ...(opts.reasoningEffort ? { modelParams: { reasoningEffort: opts.reasoningEffort } } : {}),
   };
 }

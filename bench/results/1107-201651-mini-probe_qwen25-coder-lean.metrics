@@ -1,0 +1,2 @@
+{"model":"probe/qwen25-coder","session":"km2j0b1p","requests":1,"in_tok":2503,"out_tok":39,"max_in":2503,"cached":0,"tool_calls":0,"tool_errors":0,"model_errors":0,"secs":23,"tools":""}
+TOTAL requests=1 in=2503 out=39 cached=0 tool_calls=0 tool_errors=0 model_errors=0 secs=23

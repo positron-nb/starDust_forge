@@ -1,0 +1,6 @@
+[config] profile=lean compactAt=0
+[session] http://localhost:8790/sessions/01m6v7m1b06c3jwrn6km2j0b1p (probe/qwen25-coder)
+
+RESULT done on probe/qwen25-coder in 24s; files written: none
+{"name": "get_context", "arguments": {"query": "discounts, cart, 10% discount, negative total", "budget_tokens": 1000}}
+exit=0

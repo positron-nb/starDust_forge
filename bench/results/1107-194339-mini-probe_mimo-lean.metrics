@@ -1,0 +1,2 @@
+{"model":"probe/mimo","session":"nhpm5as2","requests":5,"in_tok":16881,"out_tok":492,"max_in":3849,"cached":0,"tool_calls":6,"tool_errors":0,"model_errors":0,"secs":51,"tools":"get_context×1 list_files×1 read_file×2 propose_edit×1 run_command×1"}
+TOTAL requests=5 in=16881 out=492 cached=0 tool_calls=6 tool_errors=0 model_errors=0 secs=51

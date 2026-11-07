@@ -49,7 +49,11 @@ export async function prepareProposal(ws: Workspace, changes: ChangeManager, io:
   const eolText = original && /\r\n/.test(original) ? applied.text.replace(/\n/g, '\r\n') : applied.text;
   if ((original ?? '').replace(/\r\n/g, '\n') === applied.text) return { ok: false, reason: `The edit to ${rel} does not change anything.` };
   // Guard: deleting existing definitions must be explicit, and is always flagged in the review.
-  const removed = original ? removedDefinitions(rel, original, applied.text) : [];
+  // Only definitions that existed before this agent run are protected; the agent may still
+  // rework code it added itself earlier in the same run.
+  const baseline = changes.baselineOf(rel) ?? original ?? '';
+  const preexisting = new Set(removedDefinitions(rel, baseline, ''));
+  const removed = original ? removedDefinitions(rel, original, applied.text).filter(n => preexisting.has(n)) : [];
   const confirmed = new Set(a.confirm_removal ?? []);
   const unconfirmed = removed.filter(n => !confirmed.has(n) && !confirmed.has(n.split('.').pop()!));
   if (unconfirmed.length) {

@@ -46,7 +46,8 @@ const mcp = new EditorMcpServer(s => {
     extra = INLINE_INSTRUCTIONS;
   }
   await mcp.start();
-  const runner = new AgentRunner({ baseUrl: 'http://localhost:8790', models: models.split(','), spec: loadAgentSpec('forge-workspace', extra) });
+  const runner = new AgentRunner({ baseUrl: 'http://localhost:8790', models: models.split(','), spec: loadAgentSpec('forge-workspace', extra, { profile: (process.env.FORGE_PROFILE as 'full' | 'lean') ?? 'full', compactAt: Number(process.env.FORGE_COMPACT_AT ?? 0), reasoningEffort: process.env.FORGE_REASONING || undefined }) });
+  console.log(`[config] profile=${process.env.FORGE_PROFILE ?? 'full'} compactAt=${process.env.FORGE_COMPACT_AT ?? 'default'} reasoning=${process.env.FORGE_REASONING ?? 'default'}`);
   await mcp.registerWithTrueForge(runner.sdk, 'forge-workspace');
   changes.beginRun('e2e');
   const t0 = Date.now();

@@ -25,3 +25,22 @@ describe('removed-definition guard', () => {
     expect(removedDefinitions('docs/cli.rst', 'Title\n=====\n', '')).toEqual([]);
   });
 });
+
+describe('removal guard baseline', () => {
+  it('lets the agent rework a definition it added earlier in the same run', async () => {
+    const { ChangeManager } = await import('../src/changes/changeManager');
+    const { prepareProposal } = await import('../src/changes/prepare');
+    const files = new Map<string, string>([['/w/a.py', 'def keep():\n    return 1\n']]);
+    const io = { read: async (p: string) => files.get(p), write: async (p: string, t: string) => { files.set(p, t); } };
+    const ws = { root: '.', resolve: (p: string) => ({ abs: '/w/' + p, rel: p }) } as never;
+    const cm = new ChangeManager(io as never);
+    cm.beginRun('t');
+    const add = await prepareProposal(ws, cm, io as never, { path: 'a.py', edits: [{ start_line: 3, end_line: 2, new_string: '\n\ndef mine():\n    return 2' }] });
+    expect(add.ok).toBe(true);
+    if (add.ok) { cm.setAll(add.proposal.id, 'accepted'); cm.finish(add.proposal.id, 'apply'); await cm.applyApproved(add.proposal.key); }
+    const rework = await prepareProposal(ws, cm, io as never, { path: 'a.py', edits: [{ old_string: 'def mine():\n    return 2', new_string: 'def mine2():\n    return 3' }] });
+    expect(rework.ok).toBe(true);
+    const bad = await prepareProposal(ws, cm, io as never, { path: 'a.py', edits: [{ old_string: 'def keep():\n    return 1', new_string: 'def other():\n    return 1' }] });
+    expect(bad.ok === false && bad.reason).toMatch(/delete existing definition\(s\) keep/);
+  });
+});

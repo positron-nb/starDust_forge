@@ -1,0 +1,9 @@
+[config] profile=lean compactAt=0 reasoning=
+[session] http://localhost:8790/sessions/01m6v9jh7atka6ng2kr61sttc3 (google-gemini/gemini-3-7-flash)
+[warn] google-gemini/gemini-3-7-flash: Model endpoint unreachable (connection failed). Retrying in 2s (attempt 2/3).
+[warn] google-gemini/gemini-3-7-flash: Model endpoint unreachable (connection failed). Retrying in 4s (attempt 3/3).
+[error] google-gemini/gemini-3-7-flash failed: Model endpoint unreachable (connection failed). No more fallback models configured.
+
+RESULT error on google-gemini/gemini-3-7-flash in 187s; files written: none
+Model endpoint unreachable (connection failed).
+exit=1

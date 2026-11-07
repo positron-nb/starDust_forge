@@ -129,6 +129,11 @@ export class ChangeManager {
   }
 
   appliedInRun(runId: string): UndoEntry[] { return this.undoStack.filter(u => u.runId === runId); }
+  /** File content before the current run first changed it (undefined if the run has not touched it). */
+  baselineOf(path: string): string | undefined {
+    const first = this.undoStack.find(u => u.runId === this.runId && u.path === path);
+    return first ? first.before ?? '' : undefined;
+  }
   get lastRunWithChanges(): string | undefined { return this.undoStack[this.undoStack.length - 1]?.runId; }
   get undoDepth(): number { return this.undoStack.length; }
 

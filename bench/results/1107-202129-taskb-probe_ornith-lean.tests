@@ -1,0 +1,13 @@
+ImportError while loading conftest 'C:\Users\raiab\techfest\Forgethon\flask\tests\conftest.py'.
+tests\conftest.py:7: in <module>
+    from flask import Flask
+src\flask\__init__.py:6: in <module>
+    from .app import Flask as Flask
+src\flask\app.py:29: in <module>
+    from . import cli
+src\flask\cli.py:1172: in <module>
+    cli.add_command(config_command)
+.venv\Lib\site-packages\click\core.py:1785: in add_command
+    name = name or cmd.name
+                   ^^^^^^^^
+E   AttributeError: 'function' object has no attribute 'name'

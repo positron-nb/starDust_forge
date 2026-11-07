@@ -1,0 +1,21 @@
+[config] profile=lean compactAt=0
+[session] http://localhost:8790/sessions/01m6v5q7m47w5rpyk2nhpm5as2 (probe/mimo)
+  [tool] get_context {"query":"cart discount calculation total","budget_tokens":3000}
+  [tool] list_files {"path":".","depth":2}
+  [context] 190/3000 tok → tests/test_cart.py, shop/cart.py, shop/pricing.py
+  [tool] read_file {"path":"shop/pricing.py"}
+  [tool] read_file {"path":"tests/test_cart.py"}
+  [review] shop/pricing.py: 1 hunk(s) → accept all
+  [tool] propose_edit {"path":"shop/pricing.py","edits":1}
+  [approve cmd] {"command":"python -m pytest tests/test_cart.py -v","cwd":"."}
+  [tool] run_command {"command":"python -m pytest tests/test_cart.py -v","cwd":"."}
+
+RESULT done on probe/mimo in 51s; files written: shop/pricing.py
+Fixed.
+
+**Bug:** `shop/pricing.py` — `apply_discount` subtracted `price * percent` directly, treating `percent` as a fraction (0–1), while the docstring and callers (`cart_total([50, 50], 10)`) pass a percentage (0–100). A 10% discount on a 100 cart computed `100 - 100*10 = -900`.
+
+**Fix:** `return price - price * percent / 100` — now `cart_total([100], 10) == 90`.
+
+**Verification:** `pytest tests/test_cart.py` — 2 passed.
+exit=0

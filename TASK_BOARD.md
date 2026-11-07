@@ -18,6 +18,13 @@
 | P5 | Inline edit + diff review (hunks, undo, rollback) | IMPLEMENTED (32 unit tests; NOT yet run in VS Code or E2E) |
 | P6 | Fallback, errors, consistency checks | NOT STARTED |
 | P7a | Task A headless E2E through TrueForge | VERIFIED on Gemini and on local qwen3:8b (60s) (FLASK_DEBUG=off → False; demo/task-a-headless.diff) |
-| P7b | Task B headless | FAILED: Gemini free tier (quota) and local qwen3:8b (gives up, no edits; demo/task-b-ollama.log). Needs a stronger model. Earlier: FAILED on free tier (attempt 1: weak edits + quota). Edit tool hardened; rerun needs stronger model/quota |
+| P7b | Task B headless | NOT PASSED yet. 7 Nov: free-model sweep (see MODEL_BENCHMARK.md). Best: OpenRouter nemotron-3-ultra (correct cli.py edits, stopped by 50 req/day after re-reads). Next: rerun with lean + default compaction when quota resets (05:30 IST). |
 | P7c | Task C | fallback verified headlessly (smoke + Task A run); in-editor demo pending |
 | P8 | Submission: README, LICENSE, setup script, write-up draft, demo script | IMPLEMENTED (PDF, video, timestamps pending) |
+| F1 | Prompt-token measurement (proxy dump + breakdown + session metrics) | VERIFIED (TOKEN_OPTIMIZATION.md) |
+| F2 | Free provider research with official limits | VERIFIED (FREE_MODEL_RESEARCH.md) |
+| F3 | lean profile, compaction trigger, reasoning effort, context cap | TESTED (46 unit tests; verified in request dumps) |
+| F4 | Safety: pre-run-definition removal guard, Python syntax guard | TESTED (unit + seen refusing in real runs) |
+| F5 | Benchmark harness bench/run.sh (mini + taskb) | VERIFIED (20 runs in bench/results) |
+| F6 | Groq free tier | REJECTED with evidence (8K TPM < smallest useful request ≈6.2k + history) |
+| F7 | Local 9B models (mimo, ornith) for Task B | FAILED (pass mini, loop/drift on Task B) |

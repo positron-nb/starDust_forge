@@ -1,0 +1,2 @@
+{"model":"google-gemini/gemini-3-7-flash","session":"r61sttc3","requests":0,"in_tok":0,"out_tok":0,"max_in":0,"cached":0,"tool_calls":0,"tool_errors":0,"model_errors":3,"secs":187,"tools":""}
+TOTAL requests=0 in=0 out=0 cached=0 tool_calls=0 tool_errors=0 model_errors=3 secs=187

@@ -17,6 +17,8 @@ export interface AgentSpec {
   instructions: string;
   mcpServers: Array<Record<string, unknown>>;
   config?: Record<string, unknown>;
+  /** Passed through to the provider (e.g. { reasoningEffort: 'none' } turns off thinking on local models). */
+  modelParams?: Record<string, unknown>;
 }
 
 export interface ApprovalRequest {
@@ -90,7 +92,7 @@ export class AgentRunner {
           let input = firstInput;
           if (!this.sessionId) {
             const { data } = await this.client.sessions.create({
-              agent: { spec: { model: { name: model }, instructions: this.opts.spec.instructions,
+              agent: { spec: { model: { name: model, ...(this.opts.spec.modelParams ? { params: this.opts.spec.modelParams } : {}) }, instructions: this.opts.spec.instructions,
                 mcpServers: this.opts.spec.mcpServers, config: this.opts.spec.config } as never },
             });
             this.sessionId = data.id;

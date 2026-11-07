@@ -1,0 +1,2 @@
+{"model":"probe/mimo","session":"fy43dz1j","requests":73,"in_tok":410481,"out_tok":8280,"max_in":8106,"cached":0,"tool_calls":103,"tool_errors":55,"model_errors":0,"secs":1852,"tools":"get_context×9 list_files×7 read_file×26 search_workspace×7 find_symbol×2 run_command×16 call_tool×34 get_current_datetime×1 list_tools×1"}
+TOTAL requests=73 in=410481 out=8280 cached=0 tool_calls=103 tool_errors=55 model_errors=0 secs=1852
