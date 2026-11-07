@@ -1,0 +1,46 @@
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..eef2c594 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -15,6 +15,23 @@ from operator import itemgetter
+ from types import ModuleType
+ 
+ import click
++
++@app.cli.command()
++def config():
++    """
++    Print loaded application configuration as JSON
++
++    Options:
++      --mask  Mask sensitive values (SECRET, PASSWORD, etc.)
++    """
++    config = current_app.config
++    masked = {}
++    for key, value in config.items():
++        if any(k in key for k in ['SECRET', 'PASSWORD', 'TOKEN', 'KEY']):
++            masked[key] = '***'
++        else:
++            masked[key] = value
++    click.echo(json.dumps(masked, indent=2))
+ from click.core import ParameterSource
+ from werkzeug import run_simple
+ from werkzeug.serving import is_running_from_reloader
+diff --git a/tests/test_config.py b/tests/test_config.py
+index e5b1906e..c1c62947 100644
+--- a/tests/test_config.py
++++ b/tests/test_config.py
+@@ -17,7 +17,12 @@ def common_object_test(app):
+ 
+ 
+ def test_config_from_pyfile():
+-    app = flask.Flask(__name__)
++def test_config_command():
++    result = run_command('flask config')
++    assert 'SECRET' in result.output
++    assert '***' in result.output
++    assert 'DEBUG' in result.output
++    assert 'True' in result.output
+     app.config.from_pyfile(f"{__file__.rsplit('.', 1)[0]}.py")
+     common_object_test(app)
+ 
