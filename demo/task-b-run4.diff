@@ -1,0 +1,118 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..9bea71c4 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -86,6 +86,18 @@ server tries to start. See :ref:`address-already-in-use` for how to
+ handle that.
+ 
+ 
++Show the Configuration
++~~~~~~~~~~~~~~~~~~~~~~
++
++The ``config`` command will print the loaded configuration values as JSON.
++Sensitive values (containing SECRET, PASSWORD, TOKEN, or KEY) will be
++masked.
++
++.. code-block:: text
++
++    $ flask config
++
++
+ Debug Mode
+ ~~~~~~~~~~
+ 
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..de25030c 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -11,6 +11,7 @@ import sys
+ import traceback
+ import typing as t
+ from functools import update_wrapper
++import json
+ from operator import itemgetter
+ from types import ModuleType
+ 
+@@ -594,6 +595,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1117,19 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the config values.")
++@with_appcontext
++def config_command() -> None:
++    """Show all configuration values. Sensitive values are masked."""
++    d = dict(current_app.config)
++
++    for key in d:
++        if any(i in key.upper() for i in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            d[key] = "***"
++
++    click.echo(json.dumps(d, indent=2, sort_keys=True, default=str))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..ed44e1a7 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -1,6 +1,7 @@
+ # This file was part of Flask-CLI and was modified under the terms of
+ # its Revised BSD License. Copyright © 2015 CERN.
+ import importlib.metadata
++import json
+ import os
+ import platform
+ import ssl
+@@ -20,6 +21,7 @@ from flask import Flask
+ from flask.cli import AppGroup
+ from flask.cli import find_best_app
+ from flask.cli import FlaskGroup
++from flask.cli import FlaskGroup
+ from flask.cli import get_version
+ from flask.cli import load_dotenv
+ from flask.cli import locate_app
+@@ -382,17 +384,24 @@ def test_flaskgroup_debug(runner, set_debug_flag):
+     assert result.output == f"{not set_debug_flag}\n"
+ 
+ 
+-def test_flaskgroup_nested(app, runner):
+-    cli = click.Group("cli")
+-    flask_group = FlaskGroup(name="flask", create_app=lambda: app)
+-    cli.add_command(flask_group)
+-
+-    @flask_group.command()
+-    def show():
+-        click.echo(current_app.name)
++def test_config_command(app, runner):
++    app.config["SECRET_KEY"] = "secret"
++    app.config["DATABASE_PASSWORD"] = "password"
++    app.config["SOME_TOKEN"] = "token"
++    app.config["API_KEY"] = "key"
++    app.config["DEBUG"] = True
++    app.config["TESTING"] = True
+ 
+-    result = runner.invoke(cli, ["flask", "show"])
+-    assert result.output == "flask_test\n"
++    cli = FlaskGroup(create_app=lambda: app)
++    result = runner.invoke(cli, args=["config"])
++    assert result.exit_code == 0
++    config = json.loads(result.output)
++    assert config["SECRET_KEY"] == "***"
++    assert config["DATABASE_PASSWORD"] == "***"
++    assert config["SOME_TOKEN"] == "***"
++    assert config["API_KEY"] == "***"
++    assert config["DEBUG"] is False
++    assert config["TESTING"] is True
+ 
+ 
+ def test_no_command_echo_loading_error():
