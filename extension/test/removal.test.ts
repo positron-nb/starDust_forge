@@ -12,6 +12,11 @@ describe('removed-definition guard', () => {
     const after = BEFORE.replace('return 1', 'return 2') + '\n\ndef test_new():\n    assert True\n';
     expect(removedDefinitions('tests/t.py', BEFORE, after)).toEqual([]);
   });
+  it('flags a removed module-level assignment', () => {
+    const before = 'import x\n\ncli = Group(\n    name="flask",\n)\n\n\ndef main():\n    cli()\n';
+    const after = 'import x\n\n\ndef main():\n    cli()\n';
+    expect(removedDefinitions('src/cli.py', before, after)).toEqual(['cli']);
+  });
   it('ignores docs files', () => {
     expect(removedDefinitions('docs/cli.rst', 'Title\n=====\n', '')).toEqual([]);
   });

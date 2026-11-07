@@ -11,6 +11,9 @@ export function removedDefinitions(path: string, before: string, after: string):
   const count = (t: string) => {
     const m = new Map<string, number>();
     for (const s of parseFile(path, t).symbols) m.set(s.qualified, (m.get(s.qualified) ?? 0) + 1);
+    // module-level names too (e.g. `cli = FlaskGroup(...)`, `export const x =`)
+    const re = lang === 'python' ? /^([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/gm : /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)/gm;
+    for (const [, name] of t.matchAll(re)) if (!m.has(name)) m.set(name, 1);
     return m;
   };
   const a = count(after);
