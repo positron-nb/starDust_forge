@@ -1,0 +1,2 @@
+{"model":"openrouter/nemotron-ultra","session":"rrgs6rx7","requests":6,"in_tok":25993,"out_tok":1018,"max_in":5050,"cached":0,"tool_calls":6,"tool_errors":0,"model_errors":0,"secs":19,"tools":"get_context×1 read_file×2 propose_edit×1 run_command×2"}
+TOTAL requests=6 in=25993 out=1018 cached=0 tool_calls=6 tool_errors=0 model_errors=0 secs=19

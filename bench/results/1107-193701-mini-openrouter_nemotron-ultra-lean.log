@@ -1,0 +1,22 @@
+[config] profile=lean compactAt=24000
+[session] http://localhost:8790/sessions/01m6v5b39rdjnyvzjtrrgs6rx7 (openrouter/nemotron-ultra)
+  [tool] get_context {"query":"discount cart total calculation bug negative","budget_tokens":3000}
+  [context] 190/3000 tok → tests/test_cart.py, shop/cart.py, shop/pricing.py
+  [tool] read_file {"path":"shop/pricing.py"}
+  [tool] read_file {"path":"tests/test_cart.py"}
+  [review] shop/pricing.py: 1 hunk(s) → accept all
+  [tool] propose_edit {"path":"shop/pricing.py","edits":1}
+  [approve cmd] {"command":"python -m pytest tests/test_cart.py -q"}
+  [tool] run_command {"command":"python -m pytest tests/test_cart.py -q","cwd":"."}
+  [approve cmd] {"command":"python -c \"from shop.cart import cart_total; print('100 with 10%:', cart_total([100], 10)); print('50+50 with 10%:', cart_total([50, 50], 10))\""}
+  [tool] run_command {"command":"python -c \"from shop.cart import cart_total; print('100 with 10%:', cart_total([100], 10)); print('50+50 with 10%:', cart_total
+
+RESULT done on openrouter/nemotron-ultra in 19s; files written: shop/pricing.py
+**Fixed.** 
+
+**Bug:** In `shop/pricing.py`, `apply_discount` was multiplying price by `percent` (e.g., 10) instead of `percent / 100` (e.g., 0.10), causing a 10% discount on 100 to compute as `100 - 100 * 10 = -900`.
+
+**Fix:** Changed line 3 from `return price - price * percent` to `return price - price * (percent / 100)`.
+
+**Verified:** Both tests pass, and manual check confirms 10% off 100 = 90 (not negative).
+exit=0

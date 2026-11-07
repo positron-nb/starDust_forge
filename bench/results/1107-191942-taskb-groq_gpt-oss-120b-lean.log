@@ -1,0 +1,11 @@
+[config] profile=lean compactAt=5000
+[session] http://localhost:8790/sessions/01m6v4bcf2mgmk9ff70eb27w41 (groq/gpt-oss-120b)
+  [tool] get_context {"query":"flask cli built-in commands existing command structure config","budget_tokens":3000}
+  [context] 2973/3000 tok → src/flask/cli.py, docs/cli.rst, tests/test_cli.py, examples/tutorial/flaskr/db.py
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 25s (attempt 2/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 26s (attempt 3/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 36s (attempt 4/9).
+
+RESULT error on undefined in 109s; files written: none
+all models failed
+exit=1

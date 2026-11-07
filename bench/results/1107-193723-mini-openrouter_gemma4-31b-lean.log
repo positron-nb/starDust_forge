@@ -1,0 +1,9 @@
+[config] profile=lean compactAt=24000
+[session] http://localhost:8790/sessions/01m6v5bqwsfpfa0q323gynckbr (openrouter/gemma4-31b)
+[warn] openrouter/gemma4-31b: Rate limit / quota exceeded at the provider (429). Retrying in 2s (attempt 2/3).
+[warn] openrouter/gemma4-31b: Rate limit / quota exceeded at the provider (429). Retrying in 4s (attempt 3/3).
+[error] openrouter/gemma4-31b failed: Rate limit / quota exceeded at the provider (429). No more fallback models configured.
+
+RESULT error on openrouter/gemma4-31b in 22s; files written: none
+Rate limit / quota exceeded at the provider (429).
+exit=1

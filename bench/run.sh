@@ -18,7 +18,7 @@ else
   TASK="$ROOT/demo/tasks/task-b.txt"; PY="$WS/.venv/Scripts/python"; TESTS="tests/test_cli.py"
 fi
 cd "$ROOT/extension"
-FORGE_PROFILE=$PROFILE FORGE_COMPACT_AT=$COMPACT timeout 2400 node out/e2e-edit.js "$WS" "$MODELS" "$TASK" > "$OUT.log" 2>&1
+FORGE_PROFILE=$PROFILE FORGE_COMPACT_AT=$COMPACT FORGE_CONTEXT_MAX=${FORGE_CONTEXT_MAX:-0} timeout 2400 node out/e2e-edit.js "$WS" "$MODELS" "$TASK" > "$OUT.log" 2>&1
 echo "exit=$?" >> "$OUT.log"
 node "$ROOT/scripts/session-metrics.mjs" "$OUT.log" > "$OUT.metrics" 2>&1
 (cd "$WS" && git diff > "$OUT.diff"; "$PY" -m pytest $TESTS -q -p no:cacheprovider > "$OUT.tests" 2>&1)

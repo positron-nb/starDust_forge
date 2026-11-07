@@ -1,0 +1,13 @@
+[config] profile=lean compactAt=4500
+[session] http://localhost:8790/sessions/01m6v4gcwzk3ang0cmsamgq1j4 (groq/gpt-oss-120b)
+  [tool] get_context {"query":"flask cli built-in commands","budget_tokens":3000}
+  [context] 2985/3000 tok → src/flask/cli.py, docs/cli.rst, src/flask/testing.py, src/flask/app.py, tests/test_cli.py, tests/test_testing.py
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 39s (attempt 2/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 20s (attempt 3/9).
+  [tool] get_context {"query":"flask cli command registration FlaskGroup command definitions src/flask/cli.py","budget_tokens":3000}
+  [context] 2995/3000 tok → src/flask/cli.py, docs/cli.rst, tests/test_cli.py
+[error] groq/gpt-oss-120b failed: Request failed (413): Request too large for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens p… No more fallback models configured.
+
+RESULT error on groq/gpt-oss-120b in 84s; files written: none
+Request failed (413): Request too large for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens p…
+exit=1

@@ -83,7 +83,7 @@ export class AgentRunner {
 
     for (; this.modelIndex < this.opts.models.length; this.modelIndex++) {
       const model = this.currentModel;
-      for (let attempt = 0; attempt <= MAX_RETRIES_PER_MODEL; attempt++) {
+      for (let attempt = 0; attempt <= MAX_HINTED_RETRIES; attempt++) {
         if (this.cancelled) return { status: 'cancelled', model };
         let result: RunResult;
         try {

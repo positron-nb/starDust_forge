@@ -1,0 +1,43 @@
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..862ee78a 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -594,6 +594,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1053,6 +1054,30 @@ def shell_command() -> None:
+     code.interact(banner=banner, local=ctx)
+ 
+ 
++@click.command("config", short_help="Show the app config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the application's configuration as JSON.
++
++    Sensitive values are masked. A value is considered sensitive if its
++    key contains ``SECRET``, ``PASSWORD``, ``TOKEN``, or ``KEY``.
++    """
++    from flask import current_app
++    import json
++
++    config = current_app.config
++    masked = {}
++    sensitive_keywords = ["SECRET", "PASSWORD", "TOKEN", "KEY"]
++
++    for key, value in config.items():
++        if any(keyword in key.upper() for keyword in sensitive_keywords):
++            masked[key] = "***"
++        else:
++            masked[key] = value
++
++    click.echo(json.dumps(masked, indent=2, sort_keys=True, default=str))
++
++
+ @click.command("routes", short_help="Show the routes for the app.")
+ @click.option(
+     "--sort",

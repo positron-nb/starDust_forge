@@ -1,0 +1,2 @@
+{"model":"groq/gpt-oss-120b","session":"3bf61mfm","requests":5,"in_tok":14023,"out_tok":651,"max_in":3111,"cached":0,"tool_calls":5,"tool_errors":1,"model_errors":3,"secs":38,"tools":"get_context×1 search_workspace×1 read_file×2 propose_edit×1"}
+TOTAL requests=5 in=14023 out=651 cached=0 tool_calls=5 tool_errors=1 model_errors=3 secs=38

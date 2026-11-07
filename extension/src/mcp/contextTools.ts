@@ -28,7 +28,9 @@ export function installContextTools(server: McpServer, d: ContextToolDeps): void
   }, async ({ query, budget_tokens }) => {
     d.onToolCall?.('get_context', { query, budget_tokens });
     await d.index.refresh();
-    const r = retrieve(d.index, query, { budgetTokens: budget_tokens });
+    // optional hard cap for providers with tiny per-request limits (e.g. Groq free 8K TPM)
+    const cap = Number(process.env.FORGE_CONTEXT_MAX ?? 0);
+    const r = retrieve(d.index, query, { budgetTokens: cap > 0 ? Math.min(budget_tokens, cap) : budget_tokens });
     d.onContext?.(r);
     return text(formatContext(r));
   });

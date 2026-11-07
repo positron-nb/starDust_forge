@@ -1,0 +1,18 @@
+[config] profile=lean compactAt=3000
+[session] http://localhost:8790/sessions/01m6v4mbq153b7k4gappc1806j (groq/gpt-oss-120b)
+  [tool] list_files {"path":".","depth":2}
+  [tool] get_context {"query":"flask cli built-in commands click group","budget_tokens":4000}
+  [context] 1482/1500 tok → docs/cli.rst, src/flask/cli.py, tests/test_cli.py
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 23s (attempt 2/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 36s (attempt 3/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 24s (attempt 4/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 26s (attempt 5/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 26s (attempt 6/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 24s (attempt 7/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 26s (attempt 8/9).
+[warn] groq/gpt-oss-120b: Rate limit / quota exceeded at the provider (429). Retrying in 26s (attempt 9/9).
+[error] groq/gpt-oss-120b failed: Rate limit / quota exceeded at the provider (429). No more fallback models configured.
+
+RESULT error on groq/gpt-oss-120b in 291s; files written: none
+Rate limit / quota exceeded at the provider (429).
+exit=1
