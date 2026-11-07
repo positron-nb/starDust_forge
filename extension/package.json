@@ -213,10 +213,12 @@
     }
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap",
+    "build": "npm run build:ext && npm run build:scripts",
     "watch": "npm run build -- --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:ext": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap",
+    "build:scripts": "esbuild scripts/e2e-edit.ts scripts/e2e-tools.ts scripts/ctx.ts scripts/smoke.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outdir=out"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

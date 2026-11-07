@@ -1,0 +1,1 @@
+Discounts are wrong: a 10% discount on a 100 cart gives a negative total. Find the bug, fix it and make sure the tests pass.

@@ -1,0 +1,8 @@
+[session] http://localhost:8790/sessions/01m6v0czb7ebgbf7k2qse7z8te (local-ollama/qwen3-forge)
+  [tool] get_context {"query":"discounts cart total calculation","budget_tokens":1024}
+  [context] 130/1024 tok → shop/cart.py, tests/test_cart.py
+  [tool] read_file {"path":"shop/cart.py","start_line":4,"end_line":5}
+[error] local-ollama/qwen3-forge failed: Output truncated: hit the 8192 token limit. Raise max_tokens and retry. No more fallback models configured.
+
+RESULT error on local-ollama/qwen3-forge in 254s; files written: none
+Output truncated: hit the 8192 token limit. Raise max_tokens and retry.

@@ -1,0 +1,22 @@
+[session] http://localhost:8790/sessions/01m6v0qe62s21pkxrwbpz51hwk (local-ollama/qwen3-forge)
+  [tool] get_context {"query":"discounts cart total calculation","budget_tokens":1024}
+  [context] 190/1024 tok → shop/cart.py, tests/test_cart.py, shop/pricing.py
+  [tool] read_file {"path":"shop/pricing.py","start_line":1,"end_line":3}
+  [review] shop/pricing.py: 1 hunk(s) → accept all
+  [tool] propose_edit {"path":"shop/pricing.py","edits":1}
+  [approve cmd] {"cwd":"tests","command":"python -m pytest tests/test_cart.py -q"}
+  [tool] run_command {"command":"python -m pytest tests/test_cart.py -q","cwd":"tests"}
+  [approve cmd] {"command":"python -m pytest test_cart.py -q","cwd":"."}
+  [tool] run_command {"command":"python -m pytest test_cart.py -q","cwd":"."}
+  [approve cmd] {"command":"python -m pytest tests/test_cart.py -q","cwd":"."}
+  [tool] run_command {"command":"python -m pytest tests/test_cart.py -q","cwd":"."}
+
+RESULT done on local-ollama/qwen3-forge in 84s; files written: shop/pricing.py
+The bug was in the `apply_discount` function, which incorrectly calculated discounts by subtracting a percentage of the price (e.g., 10% of $100 became $-90). The fix改为 using `price * (1 - percent / 100)` to properly reduce the price by the percentage. 
+
+✅ **Tests passed**: `tests/test_cart.py` verified:
+- `cart_total([10, 20]) == 30` (no discount)
+- `cart_total([50, 50], 10) == 90` (10% discount)
+
+**Files changed**: `shop/pricing.py`  
+**Next steps**: No action needed—code is fixed and tests pass.

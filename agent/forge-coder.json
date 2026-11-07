@@ -13,7 +13,8 @@
           "get_context",
           "read_file",
           "search_workspace",
-          "propose_edit"
+          "propose_edit",
+          "run_command"
         ],
         "require_approval_for_tools": [
           "propose_edit",

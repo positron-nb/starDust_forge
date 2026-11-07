@@ -78,6 +78,10 @@ export function retrieve(idx: ContextIndex, query: string, o: RetrieveOptions = 
     for (const imp of idx.importersOf(f)) {
       for (const c of idx.allChunks()) if (c.file === imp && scored.has(c.id)) bump(c, 0.15, `imports ${f}`);
     }
+    // dependencies of a hot file: the code it calls often holds the bug even with no word overlap
+    for (const dep of idx.importsOf(f)) {
+      for (const c of idx.allChunks()) if (c.file === dep && c.sym.kind !== 'section') bump(c, 0.3, `imported by ${f}`);
+    }
   }
 
   // 4+5. diversity + greedy budget packing (outlines of the hottest files go first: cheap, high value)

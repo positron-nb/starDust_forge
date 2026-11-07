@@ -72,6 +72,15 @@ describe('retrieval', () => {
     expect(r.items.map(i => i.file)).toContain('tests/test_cli.py');
     expect(r.items.map(i => i.file)).not.toContain('src/pkg/unrelated.py');
   });
+  it('pulls in dependencies of a hot file even without word overlap', () => {
+    const d = new ContextIndex(new Workspace(os.tmpdir()));
+    d.indexFile('shop/pricing.py', 'def apply_discount(price, percent):\n    return price - price * percent\n');
+    d.indexFile('shop/cart.py', 'from shop.pricing import apply_discount\n\n\ndef cart_total(items, percent=0):\n    return apply_discount(sum(items), percent)\n');
+    (d as unknown as { rebuild(): void }).rebuild();
+    const r = retrieve(d, 'cart total is negative with a discount', { budgetTokens: 1000 });
+    const dep = r.items.find(i => i.file === 'shop/pricing.py');
+    expect(dep?.reasons.join(' ')).toMatch(/imported by shop\/cart\.py/);
+  });
   it('respects the token budget', () => {
     const r = retrieve(idx, 'routes command group', { budgetTokens: 500 });
     expect(r.used).toBeLessThanOrEqual(500);

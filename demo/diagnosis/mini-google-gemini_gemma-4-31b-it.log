@@ -1,0 +1,7 @@
+[session] http://localhost:8790/sessions/01m6v0pddtyrs7t46s3grmpqzh (google-gemini/gemma-4-31b-it)
+  [tool] get_context {"query":"discount calculation cart total","budget_tokens":6000}
+  [context] 190/6000 tok → tests/test_cart.py, shop/cart.py, shop/pricing.py
+[error] google-gemini/gemma-4-31b-it failed: Request failed (500): Internal error encountered. No more fallback models configured.
+
+RESULT error on google-gemini/gemma-4-31b-it in 32s; files written: none
+Request failed (500): Internal error encountered.
