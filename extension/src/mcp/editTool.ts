@@ -17,6 +17,7 @@ export const proposeEditSchema = {
     start_line: z.number().int().min(1).optional().describe('Alternative to old_string: first line to replace (1-based, as shown by read_file)'),
     end_line: z.number().int().min(0).optional().describe('Last line to replace (inclusive). Use end_line = start_line - 1 to insert before start_line.'),
   })).min(1),
+  confirm_removal: z.array(z.string()).optional().describe('Names of existing functions/classes this edit deletes. Only when the user explicitly asked for the removal; otherwise edits that delete existing definitions are refused.'),
   description: z.string().default('').describe('One line: what this change does and why'),
 };
 

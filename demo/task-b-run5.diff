@@ -1,0 +1,106 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..2377bcd1 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -146,6 +146,16 @@ context will be active, and the app instance will be imported. ::
+ Use :meth:`~Flask.shell_context_processor` to add other automatic imports.
+ 
+ 
++Show Configuration
++------------------
++
++The ``config`` command will print the application's configuration values
++as JSON. Values for keys containing ``SECRET``, ``PASSWORD``, ``TOKEN``,
++or ``KEY`` are masked for security.
++
++.. versionadded:: 3.2
++
++
+ .. _dotenv:
+ 
+ Environment Variables From dotenv
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..e38d5c0f 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -594,6 +594,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1116,36 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the app's configuration.")
++@with_appcontext
++def config_command() -> None:
++    """Show the application's configuration.
++
++    Masks the values of any key containing SECRET, PASSWORD, TOKEN or KEY
++    as "***".
++    """
++    import json
++    import re
++
++    mask_re = re.compile(r"SECRET|PASSWORD|TOKEN|KEY")
++    config = {}
++
++    for key, value in current_app.config.items():
++        if mask_re.search(key):
++            config[key] = "***"
++        else:
++            try:
++                json.dumps(value)
++                config[key] = value
++            except (TypeError, ValueError):
++                config[key] = str(value)
++
++    # For debugging purposes
++    # click.echo(f"DEBUG: {current_app.config.get('DEBUG')}", err=True)
++
++    click.echo(json.dumps(config, indent=2, sort_keys=True))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..17ac60ce 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -395,8 +395,30 @@ def test_flaskgroup_nested(app, runner):
+     assert result.output == "flask_test\n"
+ 
+ 
+-def test_no_command_echo_loading_error():
++def test_config_command(app, runner):
++    from flask import Flask
+     from flask.cli import cli
++    test_app = Flask("test_config")
++    test_app.config["SECRET_KEY"] = "super-secret"
++    test_app.config["DATABASE_PASSWORD"] = "password123"
++    test_app.config["SOME_API_TOKEN"] = "token-xyz"
++    test_app.config["ANOTHER_KEY"] = "value"
++    test_app.config["DEBUG"] = True
++    test_app.config["TESTING"] = False
++
++    # Mock app for CLI
++    cli.create_app = lambda: test_app
++
++    result = runner.invoke(cli, ["config"])
++    assert result.exit_code == 0
++    import json
++    data = json.loads(result.output)
++    assert data["SECRET_KEY"] == "***"
++    assert data["DATABASE_PASSWORD"] == "***"
++    assert data["SOME_API_TOKEN"] == "***"
++    assert data["ANOTHER_KEY"] == "***"
++    assert data["DEBUG"] is True
++    assert data["TESTING"] is False
+ 
+     try:
+         runner = CliRunner(mix_stderr=False)
