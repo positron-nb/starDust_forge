@@ -35,7 +35,8 @@ async function events(id) {
 const rows = [];
 for (const [id, model] of ids) {
   const ev = await events(id);
-  const r = { model, session: id.slice(-8), requests: 0, in_tok: 0, out_tok: 0, max_in: 0, cached: 0, tool_calls: 0, tool_errors: 0, model_errors: 0, secs: 0 };
+  const r = { model, session: id.slice(-8), requests: 0, in_tok: 0, out_tok: 0, max_in: 0, cached: 0, tool_calls: 0, tool_errors: 0, model_errors: 0, compactions: 0, dup_reads: 0, secs: 0 };
+  const seen = new Set();
   const names = {};
   for (const e of ev) {
     if (e.type === 'model.message') {
@@ -45,10 +46,16 @@ for (const [id, model] of ids) {
       r.in_tok += inp; r.max_in = Math.max(r.max_in, inp);
       r.out_tok += u.completion_tokens ?? u.output_tokens ?? 0;
       r.cached += u.prompt_tokens_details?.cached_tokens ?? 0;
-      for (const t of e.tool_calls ?? []) { r.tool_calls++; names[t.function?.name] = (names[t.function?.name] ?? 0) + 1; }
+      for (const t of e.tool_calls ?? []) {
+        r.tool_calls++; names[t.function?.name] = (names[t.function?.name] ?? 0) + 1;
+        let a = {}; try { a = JSON.parse(t.function?.arguments ?? '{}'); } catch { /* */ }
+        const reqs = t.function?.name === 'read_file' ? [a] : t.function?.name === 'read_files' ? (a.requests ?? []) : [];
+        for (const q of reqs) { const k = `${q.path}:${q.start_line ?? 1}-${q.end_line ?? ''}`; if (seen.has(k)) r.dup_reads++; seen.add(k); }
+      }
     }
     if (e.type === 'tool.response' && /"error"|could not be applied|Refused|not found in the file/i.test(String(e.content).slice(0, 400))) r.tool_errors++;
     if (e.type === 'turn.done' && e.state?.status === 'error') r.model_errors++;
+    if (e.type === 'thread.context_compaction_started') r.compactions++;
   }
   if (ev.length) r.secs = Math.round((Date.parse(ev.at(-1).created_at) - Date.parse(ev[0].created_at)) / 1000);
   r.tools = Object.entries(names).map(([k, v]) => `${k}×${v}`).join(' ');
@@ -56,4 +63,4 @@ for (const [id, model] of ids) {
 }
 for (const r of rows) console.log(JSON.stringify(r));
 const tot = k => rows.reduce((a, r) => a + r[k], 0);
-console.log(`TOTAL requests=${tot('requests')} in=${tot('in_tok')} out=${tot('out_tok')} cached=${tot('cached')} tool_calls=${tot('tool_calls')} tool_errors=${tot('tool_errors')} model_errors=${tot('model_errors')} secs=${tot('secs')}`);
+console.log(`TOTAL requests=${tot('requests')} in=${tot('in_tok')} out=${tot('out_tok')} cached=${tot('cached')} tool_calls=${tot('tool_calls')} tool_errors=${tot('tool_errors')} model_errors=${tot('model_errors')} compactions=${tot('compactions')} dup_reads=${tot('dup_reads')} secs=${tot('secs')}`);

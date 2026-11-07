@@ -9,6 +9,7 @@ export interface ContextToolDeps {
   onToolCall?: (name: string, args: unknown) => void;
   /** Lets the panel render the "why these files" table live. */
   onContext?: (r: ContextResult) => void;
+  ledger?: import('../agent/ledger').TaskLedger;
 }
 
 const RO = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
@@ -32,6 +33,7 @@ export function installContextTools(server: McpServer, d: ContextToolDeps): void
     const cap = Number(process.env.FORGE_CONTEXT_MAX ?? 0);
     const r = retrieve(d.index, query, { budgetTokens: cap > 0 ? Math.min(budget_tokens, cap) : budget_tokens });
     d.onContext?.(r);
+    for (const it of r.items) { d.ledger?.discovered.add(it.file); if (it.kind !== 'outline') d.ledger?.symbols.add(it.symbol); }
     return text(formatContext(r));
   });
 
@@ -42,6 +44,7 @@ export function installContextTools(server: McpServer, d: ContextToolDeps): void
     annotations: RO,
   }, async ({ name }) => {
     d.onToolCall?.('find_symbol', { name });
+    d.ledger?.symbols.add(name);
     await d.index.refresh();
     const hits = d.index.findSymbols(name);
     if (!hits.length) return text(`No symbol matching "${name}". Try search_workspace.`);

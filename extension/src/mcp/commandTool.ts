@@ -63,7 +63,7 @@ export function runShell(cmd: string, cwd: string, root: string, timeoutMs: numb
   });
 }
 
-export function installCommandTool(server: McpServer, d: { ws: Workspace; onToolCall?: (n: string, a: unknown) => void }): void {
+export function installCommandTool(server: McpServer, d: { ws: Workspace; onToolCall?: (n: string, a: unknown) => void; ledger?: import('../agent/ledger').TaskLedger }): void {
   const shell = process.platform === 'win32' ? 'Windows cmd.exe (use `set VAR=x&& cmd` for env vars, not `VAR=x cmd`)' : 'POSIX sh';
   server.registerTool('run_command', {
     title: 'Run terminal command',
@@ -83,6 +83,7 @@ export function installCommandTool(server: McpServer, d: { ws: Workspace; onTool
     let dir: string;
     try { dir = d.ws.resolve(cwd).abs; } catch (e) { return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true }; }
     const r = await runShell(command, dir, d.ws.root, timeout_seconds * 1000);
+    d.ledger?.recordCommand(command, r.code, r.out);
     const tail = r.out.length > 8000 ? '… (output truncated)\n' + r.out.slice(-8000) : r.out;
     return { content: [{ type: 'text' as const, text: `$ ${command}\nexit code: ${r.code}${r.timedOut ? ' (TIMED OUT)' : ''}\n${tail || '(no output)'}` }], isError: r.code !== 0 };
   });

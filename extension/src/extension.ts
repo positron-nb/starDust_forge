@@ -6,6 +6,8 @@ import { installReadTools } from './mcp/tools';
 import { installContextTools } from './mcp/contextTools';
 import { installCommandTool, killAllCommands } from './mcp/commandTool';
 import { installEditTool } from './mcp/editTool';
+import { installStateTool } from './mcp/stateTool';
+import { TaskLedger } from './agent/ledger';
 import { Workspace } from './mcp/workspace';
 import { ContextIndex } from './context/index';
 import { resolveMentions } from './context/mentions';
@@ -36,6 +38,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
 
   // ---- change management + review -------------------------------------------------
   const changes = new ChangeManager(vscodeIO);
+  const ledger = new TaskLedger();
   let view: AgentViewProvider;
   const postReview = (p: Proposal) => view?.post({ kind: 'review', id: p.id, path: p.path, description: p.description, status: p.status, isNew: p.isNew,
     hunks: p.set.hunks.map(h => ({ index: h.index, origStart: h.origStart, newStart: h.newStart, removed: h.removed, added: h.added, state: h.state })) });
@@ -45,14 +48,15 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   // ---- MCP server: the editor capabilities TrueForge's agent can call ---------------
   const onToolCall = (n: string, a: unknown) => log(`tool ${n} ${JSON.stringify(a)}`);
   mcp = new EditorMcpServer(server => {
-    installContextTools(server, { index, onToolCall, onContext: r => view?.post({
+    installContextTools(server, { index, onToolCall, ledger, onContext: r => view?.post({
       kind: 'context', query: r.query, used: r.used, budget: r.budget,
       stats: `index: ${r.stats.files} files, ${r.stats.chunks} symbols · ${r.stats.candidates} candidates ranked · ${r.skipped.length} dropped (budget/per-file cap)`,
       items: r.items.map(i => ({ file: i.file, symbol: i.symbol, start: i.start, end: i.end, score: i.score, tokens: i.tokens, why: i.reasons.join('; ') })),
     }) });
-    installReadTools(server, { ws, rgPath: findRipgrep(), onToolCall });
-    installEditTool(server, { changes, onToolCall });
-    installCommandTool(server, { ws, onToolCall });
+    installReadTools(server, { ws, rgPath: findRipgrep(), onToolCall, ledger });
+    installEditTool(server, { changes, onToolCall, ledger });
+    installCommandTool(server, { ws, onToolCall, ledger });
+    installStateTool(server, { ledger, onToolCall });
   }, log);
   await mcp.start();
 
@@ -75,7 +79,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   // ---- TrueForge approval pauses → editor UI ----------------------------------------
   const approve = async (req: ApprovalRequest): Promise<ApprovalDecision> => {
     if (req.toolName === 'propose_edit') {
-      const prep = await prepareProposal(ws, changes, vscodeIO, req.args);
+      const prep = await prepareProposal(ws, changes, vscodeIO, req.args, ledger);
       if (!prep.ok) {
         view.post({ kind: 'status', text: `Proposed edit could not be shown: ${prep.reason}`, level: 'warn' });
         return { allow: false, reason: prep.reason };
@@ -113,7 +117,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
       return { message: r.message, mentions: r.mentions.map(m => ({ ref: m.ref, kind: m.kind, resolved: m.resolved, detail: m.detail })) };
     },
     onCancel: () => { killAllCommands(); review.cancelAll(); const n = changes.cancelAll(); if (n) log(`cancel: dropped ${n} approved-but-unapplied edit(s)`); },
-    onRunStart: label => changes.beginRun(label),
+    onRunStart: (label, task) => { ledger.reset(task); return changes.beginRun(label); },
     appliedSummary: runId => {
       const files = runId ? [...new Set(changes.appliedInRun(runId).map(u => u.path))] : [];
       return files.length ? `Applied changes to ${files.length} file(s): ${files.join(', ')} (Forge: Undo Agent Run reverts them).` : '';

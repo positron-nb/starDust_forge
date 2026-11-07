@@ -21,7 +21,7 @@ export const proposeEditSchema = {
   description: z.string().default('').describe('One line: what this change does and why'),
 };
 
-export function installEditTool(server: McpServer, d: { changes: ChangeManager; onToolCall?: (n: string, a: unknown) => void }): void {
+export function installEditTool(server: McpServer, d: { changes: ChangeManager; onToolCall?: (n: string, a: unknown) => void; ledger?: import('../agent/ledger').TaskLedger }): void {
   server.registerTool('propose_edit', {
     title: 'Propose file edit',
     description: 'Propose changes to ONE file, as search/replace edits (old_string → new_string) or line-range edits (start_line/end_line → new_string). The user reviews the diff hunk by hunk and the change is applied ' +
@@ -29,9 +29,11 @@ export function installEditTool(server: McpServer, d: { changes: ChangeManager; 
       'For a new file use a single edit with old_string "" and the full content as new_string.',
     inputSchema: proposeEditSchema,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-  }, async ({ path, edits }) => {
+  }, async ({ path, edits, description }) => {
     d.onToolCall?.('propose_edit', { path, edits: edits.length });
     const r = await d.changes.applyApproved(proposalKey(path, edits));
+    if (r.ok) d.ledger?.recordEdit(path, `${description || 'edit'} (${r.message.split('.')[0]})`);
+    else d.ledger?.recordRejected(path, r.message);
     return { content: [{ type: 'text' as const, text: r.message }], isError: !r.ok };
   });
 }

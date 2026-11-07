@@ -11,6 +11,8 @@ import { installReadTools } from '../src/mcp/tools';
 import { installContextTools } from '../src/mcp/contextTools';
 import { installCommandTool } from '../src/mcp/commandTool';
 import { installEditTool } from '../src/mcp/editTool';
+import { installStateTool } from '../src/mcp/stateTool';
+import { TaskLedger } from '../src/agent/ledger';
 import { Workspace } from '../src/mcp/workspace';
 import { ContextIndex } from '../src/context/index';
 import { ChangeManager, type FileIO } from '../src/changes/changeManager';
@@ -27,13 +29,15 @@ const io: FileIO = {
   remove: p => fs.rm(p),
 };
 const changes = new ChangeManager(io);
+const ledger = new TaskLedger();
 const index = new ContextIndex(ws);
 const onToolCall = (n: string, a: unknown) => console.log(`  [tool] ${n} ${JSON.stringify(a).slice(0, 140)}`);
 const mcp = new EditorMcpServer(s => {
-  installContextTools(s, { index, onToolCall, onContext: r => console.log(`  [context] ${r.used}/${r.budget} tok → ${[...new Set(r.items.map(i => i.file))].join(', ')}`) });
-  installReadTools(s, { ws, rgPath: 'rg', onToolCall });
-  installEditTool(s, { changes, onToolCall });
-  installCommandTool(s, { ws, onToolCall });
+  installContextTools(s, { index, onToolCall, ledger, onContext: r => console.log(`  [context] ${r.used}/${r.budget} tok → ${[...new Set(r.items.map(i => i.file))].join(', ')}`) });
+  installReadTools(s, { ws, rgPath: 'rg', onToolCall, ledger });
+  installEditTool(s, { changes, onToolCall, ledger });
+  installCommandTool(s, { ws, onToolCall, ledger });
+  installStateTool(s, { ledger, onToolCall });
 });
 
 (async () => {
@@ -50,13 +54,14 @@ const mcp = new EditorMcpServer(s => {
   console.log(`[config] profile=${process.env.FORGE_PROFILE ?? 'full'} compactAt=${process.env.FORGE_COMPACT_AT ?? 'default'} reasoning=${process.env.FORGE_REASONING ?? 'default'}`);
   await mcp.registerWithTrueForge(runner.sdk, 'forge-workspace');
   changes.beginRun('e2e');
+  ledger.reset(message);
   const t0 = Date.now();
   const r = await runner.run(message, {
     onStatus: (s, l) => console.log(`[${l}] ${s}`),
     onSession: s => console.log(`[session] http://localhost:8790/sessions/${s.sessionId} (${s.model})`),
     onApproval: async req => {
       if (req.toolName === 'run_command') { console.log(`  [approve cmd] ${JSON.stringify(req.args)}`); return { allow: true }; }
-      const p = await prepareProposal(ws, changes, io, req.args);
+      const p = await prepareProposal(ws, changes, io, req.args, ledger);
       if (!p.ok) { console.log(`  [review] cannot show: ${p.reason}`); return { allow: false, reason: p.reason }; }
       console.log(`  [review] ${p.proposal.path}: ${p.proposal.set.hunks.length} hunk(s) → accept all`);
       changes.setAll(p.proposal.id, 'accepted');
@@ -66,6 +71,7 @@ const mcp = new EditorMcpServer(s => {
   });
   const files = [...new Set(changes.appliedInRun(changes.runId).map(u => u.path))];
   console.log(`\nRESULT ${r.status} on ${r.model} in ${Math.round((Date.now() - t0) / 1000)}s; files written: ${files.join(', ') || 'none'}\n${(r.output ?? r.error ?? '').slice(0, 800)}`);
+  console.log(`[ledger] reads=${ledger.totalReads} duplicate_reads=${ledger.duplicateReads} edits=${ledger.edits.length} refused=${ledger.rejected.length} last_test=${ledger.lastTest?.summary ?? 'none'}`);
   await mcp.stop();
   process.exit(r.status === 'done' ? 0 : 1);
 })();

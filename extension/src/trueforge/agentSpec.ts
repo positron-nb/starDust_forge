@@ -37,8 +37,12 @@ export function loadAgentSpec(mcpServerName: string, extraInstructions = '', opt
     config.askUserQuestions = { enabled: false };
     config.dynamicSubAgents = { enabled: false };
   }
+  // compactAt > 0: explicit trigger; < 0: compaction disabled; 0/undefined: TrueForge default
+  // (min(80% of context, context - max_output)).
   if (opts.compactAt && opts.compactAt > 0) {
     config.contextManagement = { ...config.contextManagement, compaction: { enabled: true, trigger: { type: 'input_tokens', value: opts.compactAt } } };
+  } else if (opts.compactAt && opts.compactAt < 0) {
+    config.contextManagement = { ...config.contextManagement, compaction: { enabled: false } };
   }
   return {
     instructions: m.instructions + (extraInstructions ? `\n\n${extraInstructions}` : ''),

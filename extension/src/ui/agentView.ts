@@ -28,7 +28,7 @@ export interface ViewHooks {
   /** Extra cancellation work (kill running commands, drop pending proposals). */
   onCancel?(): void;
   /** Start of a run; returns a run id used to group applied changes for undo. */
-  onRunStart?(label: string): string;
+  onRunStart?(label: string, task: string): string;
   /** e.g. "Applied changes to 3 files (Forge: Undo Agent Run to revert)." */
   appliedSummary?(runId?: string): string;
   /** Messages from the panel's review card / undo buttons. */
@@ -97,7 +97,7 @@ export class AgentViewProvider implements vscode.WebviewViewProvider {
     this.post({ kind: 'running', running: true });
     this.post({ kind: 'user', text: shown });
     if (mentions.length) this.post({ kind: 'mentions', items: mentions });
-    const runId = this.hooks.onRunStart?.(label);
+    const runId = this.hooks.onRunStart?.(label, message);
     let result: RunResult | undefined;
     try {
       result = await runner.run(message, {

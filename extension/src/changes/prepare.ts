@@ -37,7 +37,14 @@ export function removedDefinitions(path: string, before: string, after: string):
   return out;
 }
 
-export async function prepareProposal(ws: Workspace, changes: ChangeManager, io: FileIO, args: unknown):
+export async function prepareProposal(ws: Workspace, changes: ChangeManager, io: FileIO, args: unknown, ledger?: import('../agent/ledger').TaskLedger):
+  Promise<{ ok: true; proposal: Proposal } | { ok: false; reason: string }> {
+  const r = await prepareInner(ws, changes, io, args);
+  if (!r.ok) ledger?.recordRejected(String((args as { path?: string })?.path ?? '?'), r.reason);
+  return r;
+}
+
+async function prepareInner(ws: Workspace, changes: ChangeManager, io: FileIO, args: unknown):
   Promise<{ ok: true; proposal: Proposal } | { ok: false; reason: string }> {
   const a = args as { path?: string; edits?: EditSpec[]; description?: string; confirm_removal?: string[] };
   if (!a?.path || !Array.isArray(a.edits) || a.edits.length === 0) return { ok: false, reason: 'propose_edit needs "path" and a non-empty "edits" array.' };

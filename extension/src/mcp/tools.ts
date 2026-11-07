@@ -3,12 +3,14 @@ import { spawn } from 'node:child_process';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Workspace } from './workspace.js';
+import type { TaskLedger } from '../agent/ledger';
 
 export interface ToolDeps {
   ws: Workspace;
   rgPath: string;
   /** Lets the UI show each tool call as it happens. */
   onToolCall?: (name: string, args: unknown) => void;
+  ledger?: TaskLedger;
 }
 
 const text = (t: string) => ({ content: [{ type: 'text' as const, text: t }] });
@@ -23,14 +25,29 @@ export function installReadTools(server: McpServer, d: ToolDeps): void {
     annotations: RO,
   }, async ({ path, start_line, end_line }) => {
     d.onToolCall?.('read_file', { path, start_line, end_line });
-    try {
-      const lines = (await d.ws.read(path)).split(/\r?\n/);
-      const s = Math.max(1, start_line ?? 1);
-      const e = Math.min(lines.length, end_line ?? Math.min(lines.length, s + 399));
-      const body = lines.slice(s - 1, e).map((l, i) => `${String(s + i).padStart(5)}| ${l}`).join('\n');
-      const more = e < lines.length ? `\n… (${lines.length - e} more lines; request start_line=${e + 1})` : '';
-      return text(`${d.ws.resolve(path).rel} lines ${s}-${e} of ${lines.length}\n${body}${more}`);
-    } catch (err) { return fail((err as Error).message); }
+    try { return text(await readRange(d, path, start_line, end_line)); } catch (err) { return fail((err as Error).message); }
+  });
+
+  server.registerTool('read_files', {
+    title: 'Read several files/ranges',
+    description: 'Read up to 8 files or line ranges in ONE call (same output format as read_file). Use it instead of several read_file calls once you know which regions matter.',
+    inputSchema: { requests: z.array(z.object({ path: z.string(), start_line: z.number().int().min(1).optional(), end_line: z.number().int().min(1).optional() })).min(1).max(8) },
+    annotations: RO,
+  }, async ({ requests }) => {
+    d.onToolCall?.('read_files', { count: requests.length, paths: requests.map(r => r.path) });
+    const parts: string[] = [];
+    let budget = 1200; // total lines across the batch
+    for (const r of requests) {
+      if (budget <= 0) { parts.push(`${r.path}: skipped (batch line budget used; request it separately)`); continue; }
+      try {
+        const s = r.start_line ?? 1;
+        const e = Math.min(r.end_line ?? s + 399, s + budget - 1);
+        const out = await readRange(d, r.path, s, e);
+        budget -= out.split('\n').length;
+        parts.push(out);
+      } catch (err) { parts.push(`${r.path}: Error: ${(err as Error).message}`); }
+    }
+    return text(parts.join('\n\n'));
   });
 
   server.registerTool('list_files', {
@@ -63,6 +80,20 @@ export function installReadTools(server: McpServer, d: ToolDeps): void {
       return text(hits.length ? hits.join('\n') : 'No matches.');
     } catch (err) { return fail((err as Error).message); }
   });
+}
+
+/** Numbered lines of a file range; notes when the same unchanged range was already returned. */
+async function readRange(d: ToolDeps, path: string, start_line?: number, end_line?: number): Promise<string> {
+  const content = await d.ws.read(path);
+  const lines = content.split(/\r?\n/);
+  const rel = d.ws.resolve(path).rel;
+  const s = Math.max(1, start_line ?? 1);
+  const e = Math.min(lines.length, end_line ?? Math.min(lines.length, s + 399));
+  const dup = d.ledger?.recordRead(rel, content, s, e);
+  const body = lines.slice(s - 1, e).map((l, i) => `${String(s + i).padStart(5)}| ${l}`).join('\n');
+  const more = e < lines.length ? `\n… (${lines.length - e} more lines; request start_line=${e + 1})` : '';
+  const note = dup ? ' [already read earlier; file unchanged since: keep working from this content instead of reading it again]' : '';
+  return `${rel} lines ${s}-${e} of ${lines.length}${note}\n${body}${more}`;
 }
 
 export function ripgrep(rg: string, cwd: string, pattern: string, o: { glob?: string; caseSensitive?: boolean; max: number }): Promise<string[]> {
