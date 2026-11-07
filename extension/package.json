@@ -150,6 +150,20 @@
             "^git (status|diff|log)\b"
           ],
           "description": "Regexes for commands the agent may run without a confirmation prompt (TrueForge still pauses; the extension approves). Everything else asks."
+        },
+        "forge.profile": {
+          "type": "string",
+          "enum": [
+            "full",
+            "lean"
+          ],
+          "default": "full",
+          "markdownDescription": "`full`: deferred tool loading, sub-agents and ask-user questions (shows TrueForge features). `lean`: all workspace tools preloaded, no sub-agents or ask-user \u2014 ~1.3k fewer prompt tokens per request and no tool-discovery calls; best for small/free models."
+        },
+        "forge.compactAtTokens": {
+          "type": "number",
+          "default": 0,
+          "markdownDescription": "TrueForge compaction trigger in estimated input tokens (0 = TrueForge default: 80% of the model context). Set e.g. 12000 for free tiers with per-minute token limits."
         }
       }
     },

@@ -1,0 +1,2 @@
+{"model":"probe/qwen3-probe","session":"pcvw03mt","requests":6,"in_tok":21424,"out_tok":3544,"max_in":3876,"cached":0,"tool_calls":5,"tool_errors":1,"model_errors":0,"secs":75,"tools":"get_context×1 read_file×1 propose_edit×1 run_command×2"}
+TOTAL requests=6 in=21424 out=3544 cached=0 tool_calls=5 tool_errors=1 model_errors=0 secs=75

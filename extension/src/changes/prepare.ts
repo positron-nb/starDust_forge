@@ -3,6 +3,21 @@ import type { Workspace } from '../mcp/workspace';
 import { applyEdits, type EditSpec } from './hunks';
 import { ChangeManager, proposalKey, type FileIO, type Proposal } from './changeManager';
 import { parseFile, langOf } from '../context/symbols';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+/**
+ * Syntax check for Python proposals (ast.parse — nothing is executed or written).
+ * Returns an error message, or undefined when the code parses or no interpreter is available.
+ */
+export function pythonSyntaxError(root: string, source: string): string | undefined {
+  const venv = ['.venv/Scripts/python.exe', '.venv/bin/python'].map(p => path.join(root, p)).find(p => fs.existsSync(p));
+  const script = ['import ast,sys', 'try:', ' ast.parse(sys.stdin.read())', 'except SyntaxError as e:', ' print(f"line {e.lineno}: {e.msg}"); sys.exit(3)'].join('\n');
+  const r = spawnSync(venv ?? 'python', ['-c', script],
+    { input: source, encoding: 'utf8', timeout: 8000, windowsHide: true });
+  return r.status === 3 ? r.stdout.trim() : undefined;
+}
 
 /** Qualified names of code definitions present in `before` but missing from `after`. */
 export function removedDefinitions(path: string, before: string, after: string): string[] {
@@ -40,6 +55,12 @@ export async function prepareProposal(ws: Workspace, changes: ChangeManager, io:
   if (unconfirmed.length) {
     return { ok: false, reason: `Refused: this edit to ${rel} would delete existing definition(s) ${unconfirmed.join(', ')}. ` +
       'Keep existing code and add new code next to it (e.g. insert with start_line/end_line). Only if the user explicitly asked to remove them, repeat the call with confirm_removal: [names].' };
+  }
+  if (/\.pyi?$/.test(rel)) {
+    const err = pythonSyntaxError(ws.root, applied.text);
+    if (err && !(original && pythonSyntaxError(ws.root, original))) {
+      return { ok: false, reason: `Refused: the edit would make ${rel} invalid Python (${err}). Re-read the region and send a corrected edit.` };
+    }
   }
   const warn = removed.length ? `⚠ removes existing ${removed.join(', ')} — ` : '';
   const proposal = changes.createProposal({ key: proposalKey(a.path, a.edits), path: rel, abs, original, proposed: eolText, description: warn + (a.description ?? '') });

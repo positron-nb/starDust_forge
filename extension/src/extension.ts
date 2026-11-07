@@ -59,7 +59,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   // ---- TrueForge runners (created lazily: the extension works before TrueForge starts) ----
   const makeRunner = async (extraInstructions = ''): Promise<AgentRunner> => {
     const name = cfg().get<string>('mcpServerName', 'forge-workspace');
-    const r = new AgentRunner({ baseUrl: baseUrl(), models: cfg().get<string[]>('models', []), spec: loadAgentSpec(name, extraInstructions) });
+    const r = new AgentRunner({ baseUrl: baseUrl(), models: cfg().get<string[]>('models', []), spec: loadAgentSpec(name, extraInstructions, { profile: cfg().get<'full' | 'lean'>('profile', 'full'), compactAt: cfg().get<number>('compactAtTokens', 0) }) });
     try { await mcp!.registerWithTrueForge(r.sdk, name); }
     catch (err) { throw new Error(`Cannot reach TrueForge at ${baseUrl()}. Start it with: npx @truefoundry/trueforge@latest  (${(err as Error).message})`); }
     return r;

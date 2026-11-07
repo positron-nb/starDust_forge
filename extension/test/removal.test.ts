@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { removedDefinitions } from '../src/changes/prepare';
+import { removedDefinitions, pythonSyntaxError } from '../src/changes/prepare';
 
 const BEFORE = 'def a():\n    return 1\n\n\ndef test_old():\n    assert a() == 1\n';
 
@@ -16,6 +16,10 @@ describe('removed-definition guard', () => {
     const before = 'import x\n\ncli = Group(\n    name="flask",\n)\n\n\ndef main():\n    cli()\n';
     const after = 'import x\n\n\ndef main():\n    cli()\n';
     expect(removedDefinitions('src/cli.py', before, after)).toEqual(['cli']);
+  });
+  it('reports Python syntax errors with a line number', () => {
+    expect(pythonSyntaxError('.', 'def f():\n    return 1\n    return 2"\n')).toMatch(/^line 3:/);
+    expect(pythonSyntaxError('.', 'def f():\n    return 1\n')).toBeUndefined();
   });
   it('ignores docs files', () => {
     expect(removedDefinitions('docs/cli.rst', 'Title\n=====\n', '')).toEqual([]);

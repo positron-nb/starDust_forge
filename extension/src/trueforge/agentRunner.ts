@@ -47,6 +47,7 @@ export interface RunResult {
 
 const TRANSIENT = /(429|rate.?limit|overloaded|503|502|timeout|ECONNRESET|temporar)/i;
 const MAX_RETRIES_PER_MODEL = 2;
+const MAX_HINTED_RETRIES = 8;
 
 export class AgentRunner {
   private client: TrueForge;
@@ -107,9 +108,12 @@ export class AgentRunner {
         if (result.status !== 'error') return { ...result, model, sessionId: this.sessionId };
 
         const msg = result.error ?? 'unknown error';
-        if (TRANSIENT.test(msg) && attempt < MAX_RETRIES_PER_MODEL) {
+        // A provider that states how long to wait (per-minute token/request limits) gets more
+        // patience: waiting is the correct fix there, falling back would only burn other quotas.
+        const maxRetries = providerWaitHintMs(msg) !== undefined ? MAX_HINTED_RETRIES : MAX_RETRIES_PER_MODEL;
+        if (TRANSIENT.test(msg) && attempt < maxRetries) {
           const delay = retryDelayMs(msg, attempt);
-          hooks.onStatus?.(`${model}: ${summarizeError(msg)} Retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 2}/${MAX_RETRIES_PER_MODEL + 1}).`, 'warn');
+          hooks.onStatus?.(`${model}: ${summarizeError(msg)} Retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 2}/${maxRetries + 1}).`, 'warn');
           await (this.opts.sleep ?? sleep)(delay);
           continue;
         }
@@ -202,11 +206,17 @@ export function summarizeError(msg: string): string {
   return first.length > 160 ? first.slice(0, 157) + '…' : first;
 }
 
-/** Exponential backoff (2s, 4s, …), but honour a provider's "retry in Ns" hint (capped at 65s). */
+/** Provider-stated wait ("retry in 26s", "Please try again in 13.8s", "retry after 2m0.5s"), if ≤ 65 s. */
+export function providerWaitHintMs(msg: string): number | undefined {
+  const m = /(?:retry|try again) (?:in|after) (?:(\d+)m)?([\d.]+)\s*s/i.exec(msg);
+  if (!m) return undefined;
+  const ms = Math.ceil(((m[1] ? +m[1] * 60 : 0) + parseFloat(m[2])) * 1000) + 500;
+  return ms <= 65_000 ? ms : undefined;
+}
+
+/** Exponential backoff (2s, 4s, …), but honour a provider's wait hint. */
 export function retryDelayMs(msg: string, attempt: number): number {
-  const hint = /retry (?:in|after) ([\d.]+)\s*s/i.exec(msg);
-  const backoff = 2000 * 2 ** attempt;
-  return hint ? Math.min(65_000, Math.ceil(parseFloat(hint[1]) * 1000) + 500) : backoff;
+  return providerWaitHintMs(msg) ?? 2000 * 2 ** attempt;
 }
 
 function describe(err: unknown): string {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import os from 'node:os';
 import { Workspace } from '../src/mcp/workspace';
-import { retryDelayMs } from '../src/trueforge/agentRunner';
+import { retryDelayMs, providerWaitHintMs } from '../src/trueforge/agentRunner';
 import { toCamel, loadAgentSpec } from '../src/trueforge/agentSpec';
 
 describe('Workspace path guard', () => {
@@ -23,8 +23,13 @@ describe('Workspace path guard', () => {
 });
 
 describe('retryDelayMs', () => {
+  it('parses Groq-style "try again in" hints', () => {
+    expect(providerWaitHintMs('TPM: Limit 8000, Used 6226. Please try again in 13.815s. Need more')).toBe(14315);
+    expect(providerWaitHintMs('Please try again in 1m2.5s')).toBe(63000);
+    expect(providerWaitHintMs('retry in 300s')).toBeUndefined();
+  });
   it('honours provider retry hints', () => expect(retryDelayMs('Please retry in 34.4s.', 0)).toBe(34900));
-  it('caps long hints', () => expect(retryDelayMs('retry in 500s', 0)).toBe(65000));
+  it('does not wait out very long hints (daily quota): short backoff, then fallback', () => expect(retryDelayMs('retry in 500s', 0)).toBe(2000));
   it('falls back to exponential backoff', () => {
     expect(retryDelayMs('503 overloaded', 0)).toBe(2000);
     expect(retryDelayMs('503 overloaded', 2)).toBe(8000);

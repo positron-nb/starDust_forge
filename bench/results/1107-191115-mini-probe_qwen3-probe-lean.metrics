@@ -1,0 +1,2 @@
+{"model":"probe/qwen3-probe","session":"74zc0b1j","requests":11,"in_tok":36757,"out_tok":11271,"max_in":4195,"cached":0,"tool_calls":10,"tool_errors":4,"model_errors":0,"secs":239,"tools":"get_context×1 read_file×2 propose_edit×3 run_command×2 list_files×1 search_workspace×1"}
+TOTAL requests=11 in=36757 out=11271 cached=0 tool_calls=10 tool_errors=4 model_errors=0 secs=239

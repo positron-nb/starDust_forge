@@ -22,7 +22,7 @@ export function installContextTools(server: McpServer, d: ContextToolDeps): void
       'focused snippets with line numbers, and WHY each was selected. Call again with a narrower query to dig deeper.',
     inputSchema: {
       query: z.string().describe('What you need: the task, symbols, concepts'),
-      budget_tokens: z.number().int().min(500).max(24000).default(6000).describe('Max tokens of context to return'),
+      budget_tokens: z.number().int().min(500).max(12000).default(3000).describe('Max tokens of context to return'),
     },
     annotations: RO,
   }, async ({ query, budget_tokens }) => {
