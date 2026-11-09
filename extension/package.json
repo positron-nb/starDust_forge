@@ -95,8 +95,8 @@
       },
       {
         "command": "forge.cancel",
-        "key": "ctrl+shift+escape",
-        "mac": "cmd+shift+escape"
+        "key": "ctrl+alt+c",
+        "mac": "cmd+alt+c"
       },
       {
         "command": "forge.review.acceptHunk",

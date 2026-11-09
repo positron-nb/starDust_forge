@@ -33,7 +33,8 @@ export function loadAgentSpec(mcpServerName: string, extraInstructions = '', opt
   const config = m.config;
   let mcpServers = m.mcpServers.map(s => ({ ...s, name: mcpServerName }));
   if (opts.profile === 'lean') {
-    mcpServers = mcpServers.map(s => ({ ...s, preload: true }));
+    // Frequently used tools are preloaded (preload_tools); rarely needed ones (find_symbol,
+    // list_files) stay deferred and are reached through TrueForge's list_tools/get_tool_info/call_tool.
     config.askUserQuestions = { enabled: false };
     config.dynamicSubAgents = { enabled: false };
   }

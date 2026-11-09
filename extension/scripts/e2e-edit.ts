@@ -1,3 +1,5 @@
+import path from 'node:path';
+import os from 'node:os';
 /**
  * Headless E2E of the edit path with the REAL modules: TrueForge agent → propose_edit →
  * approval pause → ChangeManager review (auto-accept all hunks, as a stand-in for the
@@ -9,7 +11,7 @@ import fs from 'node:fs/promises';
 import { EditorMcpServer } from '../src/mcp/server';
 import { installReadTools } from '../src/mcp/tools';
 import { installContextTools } from '../src/mcp/contextTools';
-import { installCommandTool } from '../src/mcp/commandTool';
+import { installCommandTool, installBatchCommandTool } from '../src/mcp/commandTool';
 import { installEditTool } from '../src/mcp/editTool';
 import { installStateTool } from '../src/mcp/stateTool';
 import { TaskLedger } from '../src/agent/ledger';
@@ -37,6 +39,7 @@ const mcp = new EditorMcpServer(s => {
   installReadTools(s, { ws, rgPath: 'rg', onToolCall, ledger });
   installEditTool(s, { changes, onToolCall, ledger });
   installCommandTool(s, { ws, onToolCall, ledger });
+  installBatchCommandTool(s, { ws, onToolCall, ledger, logDir: path.join(os.tmpdir(), 'forge-logs') });
   installStateTool(s, { ledger, onToolCall });
 });
 
@@ -60,7 +63,7 @@ const mcp = new EditorMcpServer(s => {
     onStatus: (s, l) => console.log(`[${l}] ${s}`),
     onSession: s => console.log(`[session] http://localhost:8790/sessions/${s.sessionId} (${s.model})`),
     onApproval: async req => {
-      if (req.toolName === 'run_command') { console.log(`  [approve cmd] ${JSON.stringify(req.args)}`); return { allow: true }; }
+      if (req.toolName === 'run_command' || req.toolName === 'run_commands') { console.log(`  [approve cmd] ${JSON.stringify(req.args).slice(0, 400)}`); return { allow: true }; }
       const p = await prepareProposal(ws, changes, io, req.args, ledger);
       if (!p.ok) { console.log(`  [review] cannot show: ${p.reason}`); return { allow: false, reason: p.reason }; }
       console.log(`  [review] ${p.proposal.path}: ${p.proposal.set.hunks.length} hunk(s) → accept all`);

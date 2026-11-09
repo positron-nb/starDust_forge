@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { EditorMcpServer } from './mcp/server';
 import { installReadTools } from './mcp/tools';
 import { installContextTools } from './mcp/contextTools';
-import { installCommandTool, killAllCommands } from './mcp/commandTool';
+import { installCommandTool, installBatchCommandTool, killAllCommands } from './mcp/commandTool';
 import { installEditTool } from './mcp/editTool';
 import { installStateTool } from './mcp/stateTool';
 import { TaskLedger } from './agent/ledger';
@@ -56,6 +56,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     installReadTools(server, { ws, rgPath: findRipgrep(), onToolCall, ledger });
     installEditTool(server, { changes, onToolCall, ledger });
     installCommandTool(server, { ws, onToolCall, ledger });
+    installBatchCommandTool(server, { ws, onToolCall, ledger, logDir: ctx.logUri.fsPath });
     installStateTool(server, { ledger, onToolCall });
   }, log);
   await mcp.start();
@@ -90,15 +91,20 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
       if (r.accepted === 0) return { allow: false, reason: `The user rejected all ${r.total} hunk(s) of this edit to ${prep.proposal.path}. Nothing was written.` };
       return { allow: true };
     }
-    if (req.toolName === 'run_command') {
-      const cmd = String((req.args as { command?: string })?.command ?? '');
+    if (req.toolName === 'run_command' || req.toolName === 'run_commands') {
+      const cmds = req.toolName === 'run_command'
+        ? [String((req.args as { command?: string })?.command ?? '')]
+        : ((req.args as { commands?: Array<{ argv?: string[]; cwd?: string }> })?.commands ?? [])
+          .map(c => `${(c.argv ?? []).join(' ')}${c.cwd && c.cwd !== '.' ? `   (in ${c.cwd})` : ''}`);
       const allow = cfg().get<string[]>('autoApproveCommands', []);
-      if (allow.some(p => { try { return new RegExp(p).test(cmd); } catch { return false; } })) {
-        view.post({ kind: 'status', text: `Auto-approved command (forge.autoApproveCommands): ${cmd}`, level: 'info' });
+      const ok = (cmd: string) => allow.some(p => { try { return new RegExp(p).test(cmd); } catch { return false; } });
+      if (cmds.length && cmds.every(ok)) {
+        view.post({ kind: 'status', text: `Auto-approved (forge.autoApproveCommands): ${cmds.join(' ; ')}`, level: 'info' });
         return { allow: true };
       }
-      const pick = await vscode.window.showWarningMessage(`Forge agent wants to run:\n\n${cmd}`, { modal: true }, 'Run', 'Deny');
-      return pick === 'Run' ? { allow: true } : { allow: false, reason: 'The user denied this command.' };
+      const list = cmds.map((c, i) => `${i + 1}. ${c}`).join('\n');
+      const pick = await vscode.window.showWarningMessage(`Forge agent wants to run ${cmds.length} command(s):\n\n${list}`, { modal: true }, 'Run', 'Deny');
+      return pick === 'Run' ? { allow: true } : { allow: false, reason: 'The user denied this command batch.' };
     }
     return { allow: false, reason: `Tool ${req.toolName} is not approved by this client.` };
   };

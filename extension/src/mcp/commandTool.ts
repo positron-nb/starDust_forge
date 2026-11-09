@@ -88,3 +88,75 @@ export function installCommandTool(server: McpServer, d: { ws: Workspace; onTool
     return { content: [{ type: 'text' as const, text: `$ ${command}\nexit code: ${r.code}${r.timedOut ? ' (TIMED OUT)' : ''}\n${tail || '(no output)'}` }], isError: r.code !== 0 };
   });
 }
+
+/** Executes one argv command without a shell (no string concatenation / injection). */
+export function runArgv(argv: string[], cwd: string, root: string, timeoutMs: number): Promise<{ code: number | null; out: string; timedOut: boolean; ms: number }> {
+  const t0 = Date.now();
+  return new Promise(resolve => {
+    let p: ChildProcess;
+    try { p = spawn(argv[0], argv.slice(1), { cwd, shell: false, env: workspaceEnv(root), windowsHide: true }); }
+    catch (e) { resolve({ code: -1, out: String(e), timedOut: false, ms: 0 }); return; }
+    running.add(p);
+    let out = '';
+    let timedOut = false;
+    const cap = (s: string) => { out += s; if (out.length > 400_000) out = out.slice(-200_000); };
+    p.stdout?.on('data', c => cap(c.toString()));
+    p.stderr?.on('data', c => cap(c.toString()));
+    const timer = setTimeout(() => { timedOut = true; running.delete(p); try { p.kill(); } catch { /* */ } }, timeoutMs);
+    p.on('close', code => { clearTimeout(timer); running.delete(p); resolve({ code, out, timedOut, ms: Date.now() - t0 }); });
+    p.on('error', err => { clearTimeout(timer); running.delete(p); resolve({ code: -1, out: String(err), timedOut, ms: Date.now() - t0 }); });
+  });
+}
+
+/** Short, structured digest of one command's output: summary lines + tail (+ failure section for tests). */
+export function digestOutput(out: string, maxLines = 25): string {
+  const lines = out.replace(/\r/g, '').split('\n').filter(l => l.trim());
+  const fail = lines.findIndex(l => /^(=+ FAILURES =+|FAILED |E\s|Traceback|error:)/i.test(l));
+  const pick = fail >= 0 ? lines.slice(fail, fail + maxLines) : lines.slice(-maxLines);
+  return pick.join('\n');
+}
+
+export const commandSpecSchema = z.object({
+  argv: z.array(z.string()).min(1).describe('Program and arguments, e.g. ["python","-m","pytest","tests/test_x.py","-q"]. No shell: no pipes, &&, redirects or globbing.'),
+  cwd: z.string().default('.').describe('Workspace-relative working directory'),
+  timeout_seconds: z.number().int().min(1).max(600).default(120),
+});
+
+export function installBatchCommandTool(server: McpServer, d: { ws: Workspace; onToolCall?: (n: string, a: unknown) => void; ledger?: import('../agent/ledger').TaskLedger; logDir: string }): void {
+  server.registerTool('run_commands', {
+    title: 'Run several commands (verification batch)',
+    description: 'Run up to 8 commands in ONE call, each as an argv list (no shell), and get a structured result per command: exit code, duration and a short digest (failure section or tail). ' +
+      'Use it to verify a change in one step (tests, the feature itself, lint checks). The user approves the whole batch, seeing every command. Full logs are saved to a file whose path is returned. ' +
+      'A workspace virtualenv is activated automatically. Never use it to edit files.',
+    inputSchema: {
+      commands: z.array(commandSpecSchema).min(1).max(8),
+      fail_fast: z.boolean().default(false).describe('Stop at the first failing command'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, async ({ commands, fail_fast }) => {
+    d.onToolCall?.('run_commands', { commands: commands.map(c => c.argv.join(' ')), fail_fast });
+    const logs: string[] = [];
+    const results: string[] = [];
+    let failed = 0;
+    for (const [i, c] of commands.entries()) {
+      const shown = c.argv.map(a => (/\s/.test(a) ? JSON.stringify(a) : a)).join(' ');
+      const denied = isHardDenied(shown);
+      let dir: string | undefined;
+      try { dir = d.ws.resolve(c.cwd).abs; } catch (e) { results.push(`[${i + 1}] ${shown}\n  error: ${(e as Error).message}`); failed++; if (fail_fast) break; continue; }
+      if (denied) { results.push(`[${i + 1}] ${shown}\n  error: ${denied}`); failed++; if (fail_fast) break; continue; }
+      if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) { results.push(`[${i + 1}] ${shown}\n  error: cwd "${c.cwd}" is not a directory`); failed++; if (fail_fast) break; continue; }
+      const r = await runArgv(c.argv, dir, d.ws.root, c.timeout_seconds * 1000);
+      d.ledger?.recordCommand(shown, r.code, r.out);
+      logs.push(`$ ${shown}   (cwd ${c.cwd}, exit ${r.code}${r.timedOut ? ', TIMED OUT' : ''}, ${r.ms} ms)\n${r.out}`);
+      const ok = r.code === 0 && !r.timedOut;
+      if (!ok) failed++;
+      results.push(`[${i + 1}] ${shown}  → exit ${r.code}${r.timedOut ? ' (TIMED OUT)' : ''}, ${r.ms} ms${ok ? '' : '  ✗'}\n${digestOutput(r.out, ok ? 6 : 25).replace(/^/gm, '  ')}`);
+      if (!ok && fail_fast) { results.push(`(fail_fast: ${commands.length - i - 1} remaining command(s) not run)`); break; }
+    }
+    fs.mkdirSync(d.logDir, { recursive: true });
+    const logFile = path.join(d.logDir, `run-commands-${Date.now()}.log`);
+    fs.writeFileSync(logFile, logs.join('\n\n'), 'utf8');
+    const head = `${commands.length - failed}/${commands.length} succeeded${failed ? ` — ${failed} failed` : ''}. Full logs: ${logFile}`;
+    return { content: [{ type: 'text' as const, text: `${head}\n\n${results.join('\n\n')}` }], isError: failed > 0 };
+  });
+}

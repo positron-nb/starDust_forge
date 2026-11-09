@@ -44,3 +44,34 @@ describe('compaction modes in the spec sent to TrueForge', () => {
   it('disabled', () => expect(cm(-1)).toEqual({ enabled: false }));
   it('default leaves TrueForge default', () => expect(cm(0)).toEqual({ enabled: true }));
 });
+
+describe('run_commands helpers', () => {
+  it('runs argv without a shell and captures exit codes', async () => {
+    const { runArgv } = await import('../src/mcp/commandTool');
+    const ok = await runArgv([process.execPath, '-e', 'console.log("hi && echo injected")'], process.cwd(), process.cwd(), 10000);
+    expect(ok.code).toBe(0);
+    expect(ok.out.trim()).toBe('hi && echo injected');
+    const bad = await runArgv([process.execPath, '-e', 'process.exit(3)'], process.cwd(), process.cwd(), 10000);
+    expect(bad.code).toBe(3);
+  });
+  it('times out long commands', async () => {
+    const { runArgv } = await import('../src/mcp/commandTool');
+    const r = await runArgv([process.execPath, '-e', 'setTimeout(()=>{},5000)'], process.cwd(), process.cwd(), 300);
+    expect(r.timedOut).toBe(true);
+  });
+  it('digests test output to the failure section', async () => {
+    const { digestOutput } = await import('../src/mcp/commandTool');
+    const out = 'collected 3\n..F\n=== FAILURES ===\ntest_x\nE   assert 1 == 2\n1 failed, 2 passed\n';
+    expect(digestOutput(out)).toMatch(/^=== FAILURES ===[\s\S]*1 failed, 2 passed$/);
+  });
+});
+
+describe('lean profile keeps rarely used tools deferred', () => {
+  it('does not preload everything', () => {
+    const s = loadAgentSpec('w', '', { profile: 'lean' });
+    const srv = s.mcpServers[0] as Record<string, unknown>;
+    expect(srv.preload).toBe(false);
+    expect(srv.preloadTools).not.toContain('find_symbol');
+    expect(srv.preloadTools).toContain('run_commands');
+  });
+});
