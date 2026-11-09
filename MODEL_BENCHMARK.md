@@ -31,6 +31,7 @@ bench/run.sh <mini|taskb> <provider/model[,fallback]> [full|lean] [compactAt]
 | ornith 9B (local), thinking off | taskb | ❌ loop of 131 edits; broke `add_command` usage; guards blocked invalid Python and deletions | 240 | 1.94M | 43k | 239 / 153 | 26 min | import error |
 | **nemotron-3-ultra-550b:free, after fixes (9 Nov)** | **taskb** | ✅ **PASS**: 3 files, 61 passed in test_cli.py, 0 deletions, 0 compactions, 0 duplicate reads | 54 | 1.70M | 9.5k | 54 / 4 | 270 s | 61 passed |
 | **gemini-3-5-flash → 3-1-flash-lite (Gemini free, 9 Nov)** | **taskb** | ✅ **PASS**: 3 files, **59 passed** (58 + 1), 0 deletions, 0 compactions, 0 duplicate reads; survived 429/503 by waiting on provider hints and falling back automatically | 47 | 839k | 5.6k | 46 / 13 | 422 s | 59 passed |
+| gemini 3.5 Flash → 3.1 Flash-Lite, with `run_commands` (9 Nov, 2nd run) | taskb | ❌ 3.5 Flash returned 429 at once, and Flash-Lite took 86 requests and 31 edits. It **rewrote the existing test `test_prepare_import`** (signature and decorator spacing), so the test file failed to collect. The new existing-test guard refuses exactly this edit (checked on the real before/after files). | 86 | 2.08M | 9.2k | 86 / 35 | 580 s | collection error |
 | gemini-3-8-flash / 3-7-flash (free) | mini | ❌ 503 "high demand" and connection failures | 0 | – | – | – | – | – |
 
 No run deleted a pre-existing definition. `deleted-defs = 0` in every run, and the Flask tree was restored after each run.

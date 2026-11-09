@@ -44,3 +44,21 @@ describe('removal guard baseline', () => {
     expect(bad.ok === false && bad.reason).toMatch(/delete existing definition\(s\) keep/);
   });
 });
+
+describe('existing tests are protected', () => {
+  it('refuses rewriting a pre-existing test but allows adding new ones', async () => {
+    const { modifiedExistingTests } = await import('../src/changes/prepare');
+    const base = '@pytest.mark.parametrize("v", [1])\ndef test_old(v):\n    assert v\n';
+    const changed = '@pytest.mark.parametrize("v", [1])\n\ndef test_old(v, monkeypatch):\n    assert v\n';
+    const added = base + '\n\ndef test_new():\n    assert True\n';
+    expect(modifiedExistingTests('tests/test_x.py', base, base, changed)).toEqual(['test_old']);
+    expect(modifiedExistingTests('tests/test_x.py', base, base, added)).toEqual([]);
+    expect(modifiedExistingTests('src/x.py', base, base, changed)).toEqual([]);
+  });
+  it('lets the agent rework a test it added in this run', async () => {
+    const { modifiedExistingTests } = await import('../src/changes/prepare');
+    const base = 'def test_old():\n    assert 1\n';
+    const mid = base + '\n\ndef test_new():\n    assert 0\n';
+    expect(modifiedExistingTests('tests/test_x.py', base, mid, mid.replace('assert 0', 'assert 1'))).toEqual([]);
+  });
+});

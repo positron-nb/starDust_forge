@@ -9,7 +9,7 @@ Built for the IIT Bombay Techfest 2026 TrueFoundry Forge-a-thon.
 | Capability | Where |
 |---|---|
 | Inline edit (Ctrl+Alt+E) → diff with per-hunk accept/reject | `extension/src/ui/inlineEdit.ts`, `ui/review.ts` |
-| Agent mode panel (tool loop on TrueForge, subagents, streaming) | `ui/agentView.ts`, `media/panel.js` |
+| Agent mode panel (tool loop on TrueForge, streaming, approval-gated batch verification `run_commands`) | `ui/agentView.ts`, `media/panel.js` |
 | Context assembly (@file/@symbol, BM25 + import graph, token budget, reasons) | `src/context/*`, MCP tool `get_context` |
 | Diff review (hunks, apply accepted only, undo per change / per run) | `src/changes/*`, `ui/review.ts` |
 | Streaming + cancellation (no half-applied edits) | `trueforge/agentRunner.ts`, `changes/changeManager.ts` |
@@ -67,7 +67,7 @@ Open the **Forge Agent** view in the activity bar. Settings:
 | `forge.baseUrl` | `http://localhost:8790` | TrueForge server |
 | `forge.models` | `["google-gemini/gemini-3-5-flash", "google-gemini/gemini-3-1-flash-lite"]` | Model FQNs **in fallback order**. Switching model = editing this list. |
 | `forge.autoApproveCommands` | pytest / `flask --help` / `git status` | Regexes of commands run without a confirmation prompt |
-| `forge.profile` | `full` | `full`: deferred tool loading, sub-agents, ask-user (shows TrueForge features). `lean`: all workspace tools preloaded, ~700 fewer prompt tokens per request, no tool-discovery round trips. Recommended for free/small models. |
+| `forge.profile` | `full` | `full`: deferred tool loading, sub-agents, ask-user (shows TrueForge features). `lean`: frequently used tools preloaded (get_context, read_file(s), search_workspace, propose_edit, run_commands, task_state); `find_symbol`, `list_files` and `run_command` stay **deferred** (TrueForge `list_tools`/`get_tool_info`/`call_tool`); no sub-agents or ask-user. Recommended for free/small models. |
 | `forge.compactAtTokens` | `0` | TrueForge compaction trigger: `>0` explicit `input_tokens` trigger, `-1` disables compaction, `0` = TrueForge default (80% of context) |
 | `forge.reasoningEffort` | `""` | Sent as TrueForge `model.params.reasoning_effort`; `none` turns thinking off on local Ollama models |
 
@@ -80,7 +80,7 @@ OpenRouter free tier: 20 requests/min, 50 requests/day, no card needed. In TrueF
 | Ctrl+Alt+E | Inline edit selection |
 | Alt+Y / Alt+N | Accept / reject the hunk at the cursor (in a Forge review diff) |
 | Ctrl+Alt+Enter | Apply review decisions |
-| Ctrl+Shift+Esc | Cancel the agent run |
+| Ctrl+Alt+C | Cancel the agent run (also the ■ button in the panel) |
 | Commands | `Forge: Undo Last Applied Change`, `Forge: Undo Agent Run`, `Forge: Open TrueForge Session` |
 
 ## Fixed tasks (Flask 3.1.3, commit 22d92470)

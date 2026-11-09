@@ -1,0 +1,156 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..b4044360 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -130,6 +130,25 @@ The reloader can also ignore files using :mod:`fnmatch` patterns with the
+ Windows.
+ 
+ 
++
++Show the Config
++---------------
++
++The :func:`config <cli.config_command>` command will print the loaded
++application's configuration as JSON. Any key containing "SECRET",
++"PASSWORD", "TOKEN", or "KEY" is masked.
++
++::
++
++    $ flask config
++    {
++      "DEBUG": false,
++      "ENV": "production",
++      "SECRET_KEY": "***",
++      ...
++    }
++
++
+ Open a Shell
+ ------------
+ 
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..79778240 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -594,6 +594,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1116,27 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the config.
++
++    Any key containing SECRET, PASSWORD, TOKEN or KEY is masked.
++    """
++    import json
++    from flask import current_app
++
++    config = {}
++
++    for key, value in current_app.config.items():
++        if any(mask in key.upper() for mask in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            config[key] = "***"
++        else:
++            config[key] = value
++
++    click.echo(json.dumps(config, indent=2, sort_keys=True, default=str))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+@@ -1125,6 +1147,10 @@ An application to load must be given with the '--app' option,
+ in the current directory.
+ """,
+ )
++cli.add_command(config_command)
++
++
++
+ 
+ 
+ def main() -> None:
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..fb1013c9 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -26,7 +26,7 @@ from flask.cli import locate_app
+ from flask.cli import NoAppException
+ from flask.cli import prepare_import
+ from flask.cli import run_command
+-from flask.cli import ScriptInfo
++from flask.cli import config_command, ScriptInfo
+ from flask.cli import with_appcontext
+ 
+ cwd = Path.cwd()
+@@ -145,20 +145,10 @@ def test_find_best_app(test_apps):
+             test_path / "cliapp" / "inner1" / "__init__",
+             test_path,
+             "cliapp.inner1",
+-        ),
+-        (
+-            test_path / "cliapp" / "inner1" / "inner2",
+-            test_path,
+-            "cliapp.inner1.inner2",
+-        ),
+-        # dotted name
+-        ("test.a.b", cwd, "test.a.b"),
+-        (test_path / "cliapp.app", test_path, "cliapp.app"),
+-        # not a Python file, will be caught during import
+-        (test_path / "cliapp" / "message.txt", test_path, "cliapp.message.txt"),
+     ),
+ )
+-def test_prepare_import(request, value, path, result):
++
++def test_prepare_import(value, path, result, monkeypatch):
+     """Expect the correct path to be set and the correct import and app names
+     to be returned.
+ 
+@@ -687,6 +677,38 @@ def test_cli_blueprints(app):
+     result = app_runner.invoke(args=["late_registration", "late"])
+     assert "late_result" in result.output
+ 
++def test_config_command(app):
++    """Test the config command masks sensitive keys."""
++    app.config["SECRET_KEY"] = "secret"
++    app.config["PASSWORD_1"] = "password"
++    app.config["API_TOKEN"] = "token"
++    app.config["MY_KEY"] = "key"
++    app.config["FOO"] = "bar"
++    app.config["DB_URI"] = "postgres://..."
++
++    runner = app.test_cli_runner()
++    # The command is added to FlaskGroup. For tests, we must ensure it's on the app.cli.
++    app.cli.add_command(config_command)
++    result = runner.invoke(args=["config"])
++    assert result.exit_code == 0
++    import json
++    data = json.loads(result.output)
++    assert data["SECRET_KEY"] == "***"
++    assert data["PASSWORD_1"] == "***"
++    assert data["API_TOKEN"] == "***"
++    assert data["MY_KEY"] == "***"
++    assert data["FOO"] == "bar"
++    assert data["DB_URI"] == "postgres://..."
++    assert result.exit_code == 0
++    import json
++    data = json.loads(result.output)
++    assert data["SECRET_KEY"] == "***"
++    assert data["PASSWORD_1"] == "***"
++    assert data["API_TOKEN"] == "***"
++    assert data["MY_KEY"] == "***"
++    assert data["FOO"] == "bar"
++    assert data["DB_URI"] == "postgres://..."
++
+ 
+ def test_cli_empty(app):
+     """If a Blueprint's CLI group is empty, do not register it."""

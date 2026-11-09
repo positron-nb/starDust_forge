@@ -67,7 +67,7 @@ export function installCommandTool(server: McpServer, d: { ws: Workspace; onTool
   const shell = process.platform === 'win32' ? 'Windows cmd.exe (use `set VAR=x&& cmd` for env vars, not `VAR=x cmd`)' : 'POSIX sh';
   server.registerTool('run_command', {
     title: 'Run terminal command',
-    description: `Run a shell command in the workspace and return exit code + output (tail). Shell: ${shell}. ` +
+    description: `Run ONE shell command (for verification prefer run_commands, which runs several checks in one call). Returns exit code + output (tail). Shell: ${shell}. ` +
       'A workspace virtualenv (.venv) is activated automatically. Use it to run tests (e.g. "python -m pytest tests/test_x.py -q") and to verify changes. ' +
       'Do NOT use it to edit files: all file changes must go through propose_edit so the user can review them.',
     inputSchema: {

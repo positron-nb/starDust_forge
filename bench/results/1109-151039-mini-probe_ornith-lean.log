@@ -1,0 +1,18 @@
+[config] profile=lean compactAt=100000 reasoning=none
+[session] http://localhost:8790/sessions/01m6ztwsjq3znqqhs8mhxzvcgb (probe/ornith)
+  [tool] get_context {"query":"discount cart total negative 10% 100","budget_tokens":8000}
+  [context] 190/8000 tok → tests/test_cart.py, shop/pricing.py, shop/cart.py
+  [review] shop/pricing.py: 1 hunk(s) → accept all
+  [tool] propose_edit {"path":"shop/pricing.py","edits":1}
+  [approve cmd] {"commands":[{"argv":["python","-m","pytest","tests/test_cart.py","-q"],"timeout":30}]}
+  [tool] run_commands {"commands":["python -m pytest tests/test_cart.py -q"],"fail_fast":false}
+
+RESULT done on probe/ornith in 21s; files written: shop/pricing.py
+Both tests pass.
+
+**Summary:**
+- **Bug:** `shop/pricing.py` line 3 — `price * percent` was missing `/ 100`, so a 10% discount subtracted 10× the price.
+- **Fix:** Changed to `price * percent / 100`.
+- **Verified:** `pytest tests/test_cart.py` — 2 tests pass.
+[ledger] reads=0 duplicate_reads=0 edits=1 refused=0 last_test=2 passed in 0.02s
+exit=0

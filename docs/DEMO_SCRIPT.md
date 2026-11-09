@@ -26,7 +26,7 @@
 | | Click "TrueForge session ↗": turns, tool calls and the `task_state` plan in the TrueForge UI | required by the rules |
 | | `.venv/Scripts/python -m pytest tests/test_cli.py -q` → 61 passed; `flask --app ../demo/task_b_app.py config` shows `***` | verification |
 | | Forge: Undo Agent Run → `git status` clean (optional; reapply with Ctrl+Z only if time allows) | "Undo" |
-| **Cancel** 2:40–3:00 | Start any run, press Cancel (Ctrl+Shift+Esc) mid-stream → `git status` clean | "Cancellation is safe" |
+| **Cancel** 2:40–3:00 | Start any run, press Cancel (Ctrl+Alt+C or the panel's ■ button) mid-stream → `git status` clean | "Cancellation is safe" |
 | **Task C** 3:00–3:50 | Settings: `forge.models` = `["broken/dead-model", "google-gemini/gemini-3-5-flash"]`; repeat Task A | |
 | | Panel: "Model endpoint unreachable… Falling back to google-gemini/gemini-3-5-flash automatically" → diff → reject | "Automatic fallback" |
 | | `git status` → no changes | verification |

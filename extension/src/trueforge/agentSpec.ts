@@ -34,7 +34,9 @@ export function loadAgentSpec(mcpServerName: string, extraInstructions = '', opt
   let mcpServers = m.mcpServers.map(s => ({ ...s, name: mcpServerName }));
   if (opts.profile === 'lean') {
     // Frequently used tools are preloaded (preload_tools); rarely needed ones (find_symbol,
-    // list_files) stay deferred and are reached through TrueForge's list_tools/get_tool_info/call_tool.
+    // list_files, the single-command run_command) stay deferred and are reached through TrueForge's
+    // list_tools/get_tool_info/call_tool. Verification goes through the preloaded run_commands batch.
+    mcpServers = mcpServers.map(s => ({ ...s, preloadTools: (((s as Record<string, unknown>).preloadTools as string[] | undefined) ?? []).filter(t => t !== 'run_command') }));
     config.askUserQuestions = { enabled: false };
     config.dynamicSubAgents = { enabled: false };
   }

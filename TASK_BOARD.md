@@ -15,11 +15,11 @@
 | P2 | Extension foundation (panel, client, streaming, cancel, fallback) | TESTED (headless smoke + 10 unit tests; panel VERIFIED in VS Code by user) |
 | P3 | Workspace MCP tools (read/list/search/find_symbol/get_context/run_command) | TESTED (19 unit tests + headless E2E on Flask) |
 | P4 | Context engine (@file/@symbol, BM25+graph retrieval, budget, reasons, panel table) | TESTED (headless); panel table not yet seen in VS Code |
-| P5 | Inline edit + diff review (hunks, undo, rollback) | IMPLEMENTED (32 unit tests; NOT yet run in VS Code or E2E) |
-| P6 | Fallback, errors, consistency checks | NOT STARTED |
-| P7a | Task A headless E2E through TrueForge | VERIFIED on Gemini and on local qwen3:8b (60s) (FLASK_DEBUG=off → False; demo/task-a-headless.diff) |
+| P5 | Inline edit + diff review (hunks, undo, rollback) | TESTED (unit + headless). UI NOT yet verified by user (docs/UI_CHECKLIST.md checks 1–5). |
+| P6 | Fallback, errors, consistency checks | VERIFIED headless (dead endpoint, 429/503 wait hints, fallback chain) |
+| P7a | Task A headless | VERIFIED 9 Nov (Gemini, after dead-endpoint fallback): off/OFF/n/N/0/no/FALSE/unset → False, 1/yes → True; docstring lists 0/false/no/off/n; test_helpers 35 passed. UI path NOT yet verified (docs/UI_CHECKLIST.md). |
 | P7b | Task B headless | VERIFIED 9 Nov on OpenRouter nemotron-3-ultra:free (lean, compaction 100k): 3 files, test_cli 61 passed, full suite 492 passed + 1 pre-existing failure, masked output OK, 0 deletions. 54 requests (target 20–25 not met). Also VERIFIED on Gemini free (3.5 Flash → flash-lite fallback): 3 files, 59 passed, 47 requests. |
-| P7c | Task C | fallback verified headlessly (smoke + Task A run); in-editor demo pending |
+| P7c | Task C | VERIFIED headless 9 Nov: broken/dead-model → "Model endpoint unreachable" → automatic fallback → edit; Flask restored clean. In-editor (reject diff → git status clean) NOT yet verified. |
 | P8 | Submission: README, LICENSE, setup script, write-up draft, demo script | IMPLEMENTED (PDF, video, timestamps pending) |
 | F1 | Prompt-token measurement (proxy dump + breakdown + session metrics) | VERIFIED (TOKEN_OPTIMIZATION.md) |
 | F2 | Free provider research with official limits | VERIFIED (FREE_MODEL_RESEARCH.md) |
@@ -28,3 +28,9 @@
 | F5 | Benchmark harness bench/run.sh (mini + taskb) | VERIFIED (20 runs in bench/results) |
 | F6 | Groq free tier | REJECTED with evidence (8K TPM < smallest useful request ≈6.2k + history) |
 | F7 | Local 9B models (mimo, ornith) for Task B | FAILED (pass mini, loop/drift on Task B) |
+| F8 | run_commands batch verification (argv, approval, per-command exit codes, logs) | TESTED (unit; used in local mini run: 4 requests). Task B request count with it: pending Nemotron run |
+| F9 | Existing-test guard (no rewriting pre-run tests) | TESTED (unit + replay on the real failing Gemini edit) |
+| F10 | Cancel keybinding moved to Ctrl+Alt+C (Ctrl+Shift+Esc is captured by Windows) | DONE |
+| H1 | Team details in write-up | PENDING (user) |
+| H2 | UI checklist (13 checks) | PENDING (user), docs/UI_CHECKLIST.md |
+| H3 | 4-min video + scorecard timestamps | PENDING (user), docs/DEMO_SCRIPT.md |

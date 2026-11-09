@@ -76,3 +76,12 @@ It checks that Flask is clean at `22d92470`, that 58 baseline tests pass, that T
 - **The 20–25 request target was not met.** The new waste is verification probing: 23 `run_command` calls, including seven one-off `python -c` experiments.
 - Next generic fix: tell the agent to verify once with the relevant test file and `--help`, not with ad-hoc probes. Budget run_command calls and say so in `task_state`.
 - Requests also include the TrueForge turn for each tool approval. Our tool budget was 54 calls for 54 requests.
+
+## 5. Batch verification (`run_commands`) and the existing-test guard (9 Nov, later)
+- **`run_commands`:** up to 8 commands per call. Each command is an argv list (no shell), runs in a validated cwd with its own timeout and exit code, and is summarised briefly. Full logs go to a file and `fail_fast` is optional. The user approves the whole batch and sees every command; it is auto-approved only if **every** command matches `forge.autoApproveCommands`. In the lean profile the single `run_command` is deferred, so the preloaded way to verify is the batch.
+- **Local check:** on the mini task, Ornith verified with one `run_commands` call, and the whole task took **4 requests**.
+- **Gemini Task B (2nd run that day):**
+  - 3.5 Flash hit its quota, so Flash-Lite did the work: 86 requests, and it called `run_commands` 27 times with mostly one command each.
+  - It **rewrote an existing test**, which the removal guard did not catch because the name still existed.
+  - Fix: a new guard. In test files, the text of every test that existed before the run must stay identical; the agent may add tests and rework its own. A replay on the real before/after files flags `test_prepare_import`.
+- **Status:** the target of <40 requests on Task B with batch verification is **not yet measured on a capable model**. The OpenRouter Nemotron quota was used up by the passing run earlier that day. Next run: after the 05:30 IST reset, using `bench/preflight.sh` and then `bench/run.sh taskb openrouter/nemotron-ultra lean 100000`.

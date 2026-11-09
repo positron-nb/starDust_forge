@@ -18,7 +18,7 @@
                  ▲ MCP tool calls                       │ model calls
           ┌──────┴───────────────────────────────────────▼──────┐
           │ TrueForge (local npx, :8790) — agent loop, models,   │
-          │ deferred tools, subagents, compaction, sessions      │
+          │ deferred tools, compaction, approvals, sessions      │
           └──────────────────────────────────────────────────────┘
 ```
 
