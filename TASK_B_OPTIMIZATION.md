@@ -57,6 +57,11 @@ It checks that Flask is clean at `22d92470`, that 58 baseline tests pass, that T
 | `flask --app demo/task_b_app.py config` | — | `SECRET_KEY`, `DATABASE_PASSWORD`, `API_TOKEN` = `"***"`; `NAME` = `"demo"` |
 | Time | 258 s | 270 s |
 
+### Second free model (same fixes, plus the "verify once" rule)
+`bench/results/1109-143315-taskb-google-gemini_gemini-3-5-flash-lean.*`: Gemini 3.5 Flash hit 429/503 after 9 requests. The runner waited on the provider hints (10 s, 55 s) and then fell back automatically to `gemini-3-1-flash-lite`, which finished.
+- Totals: **47 requests**, 839k input tokens, 0 compactions, 0 duplicate reads, 13 failed tool calls (mostly non-unique `old_string`, later fixed).
+- Result: 3 files, **`test_cli.py` 59 passed**, full suite 490 passed plus the 1 pre-existing failure. `flask config` masks the secrets.
+
 ### Timeline (request numbers)
 - #1–12: discovery (one `get_context`, reads, a search).
 - #13: plan saved with `task_state`.

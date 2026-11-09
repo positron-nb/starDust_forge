@@ -1,0 +1,3 @@
+{"model":"google-gemini/gemini-3-5-flash","session":"4yp7c2ts","requests":9,"in_tok":138205,"out_tok":1842,"max_in":26935,"cached":0,"tool_calls":9,"tool_errors":1,"model_errors":3,"compactions":0,"dup_reads":0,"secs":115,"tools":"get_context×3 search_workspace×1 read_file×5"}
+{"model":"google-gemini/gemini-3-1-flash-lite","session":"mfkve9pm","requests":38,"in_tok":701228,"out_tok":3787,"max_in":36717,"cached":0,"tool_calls":37,"tool_errors":12,"model_errors":4,"compactions":0,"dup_reads":0,"secs":307,"tools":"list_files×2 search_workspace×3 read_file×7 run_command×14 task_state×2 propose_edit×9"}
+TOTAL requests=47 in=839433 out=5629 cached=0 tool_calls=46 tool_errors=13 model_errors=7 compactions=0 dup_reads=0 secs=422

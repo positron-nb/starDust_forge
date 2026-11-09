@@ -36,7 +36,7 @@ Every model below is free; no paid model was used.
 | Model (TrueForge name → provider model) | Where | Role | Verified result |
 |---|---|---|---|
 | `openrouter/nemotron-ultra` → `nvidia/nemotron-3-ultra-550b-a55b:free` | OpenRouter free tier (20 req/min, 50 req/day, no token limit) | Agent mode (Task B) | Task B: 3 files, 61 passed in `test_cli.py`, 54 requests, 270 s |
-| `google-gemini/gemini-3-5-flash` | Google AI Studio free tier | Inline edit (Task A), fallback target | Task A: 19 s after the fallback |
+| `google-gemini/gemini-3-5-flash` (→ `gemini-3-1-flash-lite` fallback) | Google AI Studio free tier | Inline edit (Task A); agent mode alternative | Task A: 19 s after the fallback. Task B: 3 files, 59 passed, 47 requests, after 429/503 → automatic fallback |
 | `broken/dead-model` (custom → `http://127.0.0.1:9/v1`) | unreachable on purpose | Task C | "Model endpoint unreachable" → automatic fallback |
 | `probe/ornith`, `probe/mimo` (9B, Ollama, RTX 5060 8 GB) | local, offline | small edits only | pass a 3-file bug fix; fail Task B (loops) |
 

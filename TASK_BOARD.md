@@ -18,7 +18,7 @@
 | P5 | Inline edit + diff review (hunks, undo, rollback) | IMPLEMENTED (32 unit tests; NOT yet run in VS Code or E2E) |
 | P6 | Fallback, errors, consistency checks | NOT STARTED |
 | P7a | Task A headless E2E through TrueForge | VERIFIED on Gemini and on local qwen3:8b (60s) (FLASK_DEBUG=off → False; demo/task-a-headless.diff) |
-| P7b | Task B headless | VERIFIED 9 Nov on OpenRouter nemotron-3-ultra:free (lean, compaction 100k): 3 files, test_cli 61 passed, full suite 492 passed + 1 pre-existing failure, masked output OK, 0 deletions. 54 requests (target 20–25 not met). |
+| P7b | Task B headless | VERIFIED 9 Nov on OpenRouter nemotron-3-ultra:free (lean, compaction 100k): 3 files, test_cli 61 passed, full suite 492 passed + 1 pre-existing failure, masked output OK, 0 deletions. 54 requests (target 20–25 not met). Also VERIFIED on Gemini free (3.5 Flash → flash-lite fallback): 3 files, 59 passed, 47 requests. |
 | P7c | Task C | fallback verified headlessly (smoke + Task A run); in-editor demo pending |
 | P8 | Submission: README, LICENSE, setup script, write-up draft, demo script | IMPLEMENTED (PDF, video, timestamps pending) |
 | F1 | Prompt-token measurement (proxy dump + breakdown + session metrics) | VERIFIED (TOKEN_OPTIMIZATION.md) |

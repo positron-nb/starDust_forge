@@ -1,0 +1,110 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..40d4bfc6 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -315,6 +315,25 @@ committed to the repository so that it works automatically wherever the project
+ is checked out.
+ 
+ 
++.. _cli-config:
++Config
++------
++
++The :func:`config <cli.config_command>` command shows the configuration currently loaded
++into the application. Sensitive keys, such as those containing "SECRET", "PASSWORD",
++"TOKEN", or "KEY" are masked with "***".
++
++.. code-block:: console
++
++    $ flask config
++    {
++      "DEBUG": false,
++      "ENV": "production",
++      "SECRET_KEY": "***",
++      ...
++    }
++
++
+ Custom Commands
+ ---------------
+ 
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..4dc145f4 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -4,6 +4,7 @@ import ast
+ import collections.abc as cabc
+ import importlib.metadata
+ import inspect
++import json
+ import os
+ import platform
+ import re
+@@ -594,6 +595,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1117,26 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the config.")
++@pass_script_info
++def config_command(info: ScriptInfo) -> None:
++    """Show the config."""
++    app = info.load_app()
++    config = {}
++
++    for key, value in app.config.items():
++        if any(k in key.upper() for k in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            config[key] = "***"
++        else:
++            try:
++                json.dumps(value)
++                config[key] = value
++            except (TypeError, ValueError):
++                config[key] = str(value)
++
++    click.echo(json.dumps(config, indent=2, sort_keys=True))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..e9e2302f 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -700,3 +700,28 @@ def test_cli_empty(app):
+ def test_run_exclude_patterns():
+     ctx = run_command.make_context("run", ["--exclude-patterns", __file__])
+     assert ctx.params["exclude_patterns"] == [__file__]
++def test_config_command(runner):
++    def create_app():
++        app = Flask("testapp")
++        app.config["SECRET_KEY"] = "secret"
++        app.config["PASSWORD"] = "password"
++        app.config["TOKEN"] = "token"
++        app.config["KEY"] = "key"
++        # app.config["DEBUG"] = True # This might get overwritten by Flask's defaults if not careful?
++        app.config["MY_DEBUG"] = True
++        app.config["FOO"] = "bar"
++        return app
++
++        from flask.cli import FlaskGroup
++
++        cli = FlaskGroup(create_app=create_app)
++        result = runner.invoke(cli, ["config"])
++        assert result.exit_code == 0
++        import json
++        data = json.loads(result.output)
++        assert data["SECRET_KEY"] == "***"
++        assert data["PASSWORD"] == "***"
++        assert data["TOKEN"] == "***"
++        assert data["KEY"] == "***"
++        assert data["MY_DEBUG"] is True
++        assert data["FOO"] == "bar"
