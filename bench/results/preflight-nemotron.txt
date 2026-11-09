@@ -1,0 +1,12 @@
+== Flask
+clean
+HEAD 22d92470 (expect 22d92470)
+58 passed in 0.43s
+== TrueForge
+api 200
+model nvidia/nemotron-3-ultra-550b-a55b:free ctx=131072 max_out=16384
+== Effective compaction
+trigger input_tokens=100000
+== Connectivity (1 request)
+PING openrouter/nemotron-ultra: done in 7419 ms; reply="pong 🏓"
+PREFLIGHT OK

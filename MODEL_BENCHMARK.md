@@ -29,6 +29,7 @@ bench/run.sh <mini|taskb> <provider/model[,fallback]> [full|lean] [compactAt]
 | mimo-v2.6 9B (local) | taskb | ❌ compacted 15× (threshold = 16k ctx − 8k max output = 8k); summaries lost the task and it drifted to `git log` | 73 | 410k | 8.3k | 103 / 55 | 31 min | 58 (unchanged) |
 | ornith 9B (local), thinking on | taskb | ❌ thinking used all 4,096 output tokens | 3 | 21k | 4.3k | 2 / 0 | 126 s | – |
 | ornith 9B (local), thinking off | taskb | ❌ loop of 131 edits; broke `add_command` usage; guards blocked invalid Python and deletions | 240 | 1.94M | 43k | 239 / 153 | 26 min | import error |
+| **nemotron-3-ultra-550b:free, after fixes (9 Nov)** | **taskb** | ✅ **PASS**: 3 files, 61 passed in test_cli.py, 0 deletions, 0 compactions, 0 duplicate reads | 54 | 1.70M | 9.5k | 54 / 4 | 270 s | 61 passed |
 | gemini-3-8-flash / 3-7-flash (free) | mini | ❌ 503 "high demand" and connection failures | 0 | – | – | – | – | – |
 
 No run deleted a pre-existing definition. `deleted-defs = 0` in every run, and the Flask tree was restored after each run.

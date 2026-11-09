@@ -33,24 +33,41 @@ All earlier safety guarantees are unchanged:
 ## 3. Pre-flight (`bench/preflight.sh <model> <compactAt>`)
 It checks that Flask is clean at `22d92470`, that 58 baseline tests pass, that TrueForge is up and the model is configured, and it prints the effective compaction. It then sends **one** connectivity request through TrueForge (`out/ping.js`). It was tested locally on 7 Nov and printed "PREFLIGHT OK".
 
-## 4. Comparison
-| Metric | Previous run (7 Nov) | New run |
+## 4. Comparison (9 Nov 2026, run `bench/results/1109-142510-taskb-openrouter_nemotron-ultra-lean.*`)
+| Metric | Previous run (7 Nov) | New run (9 Nov) |
 |---|---|---|
-| Total requests | 39 (stopped by the daily cap) | _pending (after 05:30 IST quota reset)_ |
-| Input tokens | 498,665 | |
-| Output tokens | 4,858 | |
-| Max single request | 23.3k | |
-| Compaction events | 4 | |
-| Duplicate read calls (exact range) | 7 (plus about 20 overlapping re-reads) | |
-| read_file / read_files calls | 29 | |
-| Failed tool calls | 7 | |
-| Model errors | 6 (3 × 429 at the cap, 3 on fallback) | |
-| Tests | 58 (no test added) | |
-| Files changed | 1 (`cli.py`, correct) | |
-| Time | 258 s | |
+| Outcome | ❌ stopped by the daily cap after 1 file | ✅ **Task B done**: 3 files discovered and edited, tests pass |
+| Total requests | 39 | 54 (work finished by about #50; #51–54 were extra checks, and the cap's 429 ended the run) |
+| Input tokens | 498,665 | 1,696,541 (no compaction, so history grows; free tier has no token limit) |
+| Output tokens | 4,858 | 9,512 |
+| Max single request | 23.3k | 47.6k (of 131k) |
+| Compaction events | 4 | **0** |
+| Duplicate read calls (exact range) | 7, plus ~20 overlapping re-reads | **0** |
+| read_file / read_files calls | 29 | 20 |
+| `task_state` calls | — | 1 (plan saved at request #13) |
+| propose_edit calls | 3 | 8 (all reviewed; 0 refused) |
+| run_command calls | 0 | 23 (tests plus `python -c` probes) |
+| Failed tool calls | 7 | 4 (wrong `cd /workspace` and early test failures, then fixed) |
+| Model errors | 6 | 3 (429 at the daily cap, after the work was done) |
+| Files changed | 1 | 3: `src/flask/cli.py`, `tests/test_cli.py`, `docs/cli.rst` |
+| Deleted pre-existing definitions | 0 | 0 |
+| `tests/test_cli.py` | 58 passed (no new test) | **61 passed** (58 + 3 new `TestConfig` tests) |
+| Whole Flask suite | — | 492 passed, 1 failed. The failure is `test_reqctx::test_bad_environ_raises_bad_request`, which **fails on clean 3.1.3 too** (baseline 489 passed, 1 failed). |
+| `flask --help` | — | lists `config  Show the app config.` |
+| `flask --app demo/task_b_app.py config` | — | `SECRET_KEY`, `DATABASE_PASSWORD`, `API_TOKEN` = `"***"`; `NAME` = `"demo"` |
+| Time | 258 s | 270 s |
 
-Run command:
-```bash
-bench/preflight.sh openrouter/nemotron-ultra 100000
-bench/run.sh taskb openrouter/nemotron-ultra lean 100000
-```
+### Timeline (request numbers)
+- #1–12: discovery (one `get_context`, reads, a search).
+- #13: plan saved with `task_state`.
+- #14–26: edits to `cli.py`, `test_cli.py` and `docs/cli.rst`.
+- #27–40: test failures fixed: a wrong working directory, the JSON `default`, and the test fixture. #32–38 were seven `python -c` probes.
+- #41: `TestConfig` 3 passed.
+- #49–50: wider suites, ending in 86 passed for `test_cli.py` + `test_testing.py`.
+- #51–54: extra checks, then the daily cap.
+
+### Verdict and what is left
+- **The re-read loop is gone.** Both compactions and duplicate reads are 0.
+- **The 20–25 request target was not met.** The new waste is verification probing: 23 `run_command` calls, including seven one-off `python -c` experiments.
+- Next generic fix: tell the agent to verify once with the relevant test file and `--help`, not with ad-hoc probes. Budget run_command calls and say so in `task_state`.
+- Requests also include the TrueForge turn for each tool approval. Our tool budget was 54 calls for 54 requests.

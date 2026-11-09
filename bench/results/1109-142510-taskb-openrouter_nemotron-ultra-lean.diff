@@ -1,0 +1,150 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..4d077643 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -146,6 +146,24 @@ context will be active, and the app instance will be imported. ::
+ Use :meth:`~Flask.shell_context_processor` to add other automatic imports.
+ 
+ 
++View the Config
++---------------
++
++To inspect the configuration of your application, you can use the
++:func:`config <cli.config_command>` command. This prints the entire
++configuration as JSON. Sensitive values are masked: any key containing
++``SECRET``, ``PASSWORD``, ``TOKEN``, or ``KEY`` (case-insensitive) will
++have its value displayed as ``"***"``. ::
++
++    $ flask config
++    {
++      "DEBUG": false,
++      "SECRET_KEY": "***",
++      "DATABASE_URL": "postgresql://localhost/mydb",
++      "API_TOKEN": "***"
++    }
++
++
+ .. _dotenv:
+ 
+ Environment Variables From dotenv
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..4fd3951e 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -4,6 +4,7 @@ import ast
+ import collections.abc as cabc
+ import importlib.metadata
+ import inspect
++import json
+ import os
+ import platform
+ import re
+@@ -594,6 +595,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1117,31 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the app config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the app's configuration, masking sensitive values.
++
++    Keys containing SECRET, PASSWORD, TOKEN, or KEY (case-insensitive)
++    will have their values masked as "***".
++    """
++    import re
++
++    mask_pattern = re.compile(r"SECRET|PASSWORD|TOKEN|KEY", re.IGNORECASE)
++    config = {}
++    for key, value in sorted(current_app.config.items()):
++        if mask_pattern.search(key):
++            config[key] = "***"
++        else:
++            config[key] = value
++
++    def json_default(o: t.Any) -> str:
++        # Only convert non-JSON-native types to string
++        return str(o)
++
++    click.echo(json.dumps(config, indent=2, sort_keys=True, default=json_default))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..1cd27248 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -518,6 +518,64 @@ class TestRoutes:
+         assert "Host" in result.output
+ 
+ 
++class TestConfig:
++    @pytest.fixture
++    def app(self):
++        app = Flask(__name__)
++        app.config.update(
++            {
++                "CUSTOM_DEBUG": True,
++                "SECRET_KEY": "super-secret",
++                "DATABASE_PASSWORD": "db-pass",
++                "API_TOKEN": "api-token",
++                "ENCRYPTION_KEY": "enc-key",
++                "NORMAL_SETTING": "value",
++                "ANOTHER_KEY": "should-be-masked",
++            }
++        )
++        return app
++
++    @pytest.fixture
++    def invoke(self, app, runner):
++        cli = FlaskGroup(create_app=lambda: app, set_debug_flag=False)
++        return partial(runner.invoke, cli)
++
++    def test_config_output(self, invoke):
++        result = invoke(["config"])
++        assert result.exit_code == 0
++        import json
++
++        config = json.loads(result.output)
++        # Check masked values
++        assert config["SECRET_KEY"] == "***"
++        assert config["DATABASE_PASSWORD"] == "***"
++        assert config["API_TOKEN"] == "***"
++        assert config["ENCRYPTION_KEY"] == "***"
++        assert config["ANOTHER_KEY"] == "***"
++        # Check unmasked values
++        assert config["CUSTOM_DEBUG"] is True
++        assert config["NORMAL_SETTING"] == "value"
++
++    def test_config_sorted_keys(self, invoke):
++        result = invoke(["config"])
++        assert result.exit_code == 0
++        import json
++
++        config = json.loads(result.output)
++        keys = list(config.keys())
++        assert keys == sorted(keys)
++
++    def test_config_pretty_printed(self, invoke):
++        result = invoke(["config"])
++        assert result.exit_code == 0
++        # Should be pretty printed with indentation
++        assert "  " in result.output
++        # Should be valid JSON
++        import json
++
++        json.loads(result.output)
++
++
+ def dotenv_not_available():
+     try:
+         import dotenv  # noqa: F401

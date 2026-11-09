@@ -67,6 +67,12 @@ Open the **Forge Agent** view in the activity bar. Settings:
 | `forge.baseUrl` | `http://localhost:8790` | TrueForge server |
 | `forge.models` | `["google-gemini/gemini-3-5-flash", "google-gemini/gemini-3-1-flash-lite"]` | Model FQNs **in fallback order**. Switching model = editing this list. |
 | `forge.autoApproveCommands` | pytest / `flask --help` / `git status` | Regexes of commands run without a confirmation prompt |
+| `forge.profile` | `full` | `full`: deferred tool loading, sub-agents, ask-user (shows TrueForge features). `lean`: all workspace tools preloaded, ~700 fewer prompt tokens per request, no tool-discovery round trips. Recommended for free/small models. |
+| `forge.compactAtTokens` | `0` | TrueForge compaction trigger: `>0` explicit `input_tokens` trigger, `-1` disables compaction, `0` = TrueForge default (80% of context) |
+| `forge.reasoningEffort` | `""` | Sent as TrueForge `model.params.reasoning_effort`; `none` turns thinking off on local Ollama models |
+
+### Free hosted model (tested)
+OpenRouter free tier: 20 requests/min, 50 requests/day, no card needed. In TrueForge **Settings → Models → Add Custom Provider**: name `openrouter`, base URL `https://openrouter.ai/api/v1`, your key, model ID `nvidia/nemotron-3-ultra-550b-a55b:free`, model name `nemotron-ultra`, context `131072`, max output `16384`. Then set `forge.models` to `["openrouter/nemotron-ultra"]`, `forge.profile` to `lean` and `forge.compactAtTokens` to `100000`. The research and measurements behind this choice are in [FREE_MODEL_RESEARCH.md](FREE_MODEL_RESEARCH.md), [MODEL_BENCHMARK.md](MODEL_BENCHMARK.md) and [TASK_B_OPTIMIZATION.md](TASK_B_OPTIMIZATION.md).
 
 ### Keys
 | Key | Action |
@@ -89,9 +95,19 @@ printf '.venv/\n.pytest_cache/\n' >> .git/info/exclude   # keep `git status` cle
 
 Headless rehearsals (same modules, no UI): `extension/scripts/e2e-edit.ts`, logs in `demo/`.
 
+### Benchmark and measurement tools
+```bash
+bench/preflight.sh openrouter/nemotron-ultra 100000          # clean Flask, config, 1-request connectivity check
+bench/run.sh taskb openrouter/nemotron-ultra lean 100000     # real pipeline, metrics + tests + diff, restores Flask
+bench/run.sh mini  <provider/model> lean                     # 3-file sanity task (~5 requests)
+node scripts/session-metrics.mjs bench/results/<run>.log     # provider-reported usage per TrueForge session
+```
+`scripts/reasoning-shim.mjs` is an optional local pass-through for providers that reject replayed `reasoning_content`. With `--dump`, it also records request bodies, which `scripts/prompt-breakdown.mjs` turns into a token breakdown.
+
 ## Security
 - Tools are confined to the workspace; `.git/`, `.env*`, keys/certs are denied.
 - The MCP server binds to 127.0.0.1 and requires a random per-session bearer token (registered with TrueForge as header auth).
+- Edits are refused before review if they delete a definition that existed before the run (functions, classes, module-level assignments), unless `confirm_removal` names it, or if they would make a Python file invalid (`ast.parse`; nothing is executed).
 - Writes only via `propose_edit` after review; commands are approval-gated with a hard deny-list (`rm -rf /`, `git push`, `reset --hard`, `curl | sh`, …).
 - No API keys in this repository; `config/models.json` is gitignored.
 
