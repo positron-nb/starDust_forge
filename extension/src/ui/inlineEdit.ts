@@ -18,7 +18,7 @@ export function registerInlineEdit(ctx: vscode.ExtensionContext, deps: {
   ctx.subscriptions.push(vscode.commands.registerCommand('forge.inlineEdit', async () => {
     const ed = vscode.window.activeTextEditor;
     if (!ed || ed.document.uri.scheme !== 'file') return vscode.window.showInformationMessage('Forge: open a file and select code to edit.');
-    if (deps.view.isRunning) return vscode.window.showWarningMessage('Forge: a run is already in progress — cancel it first (Ctrl+Shift+Esc).');
+    if (deps.view.isRunning) return vscode.window.showWarningMessage('Forge: a run is already in progress — cancel it first (Ctrl+Alt+C).');
     const sel: vscode.Range = ed.selection.isEmpty ? ed.document.lineAt(ed.selection.active.line).range : ed.selection;
     const start = sel.start.line + 1, end = sel.end.line + (sel.end.character === 0 && sel.end.line > sel.start.line ? 0 : 1);
     const full = new vscode.Range(start - 1, 0, end - 1, ed.document.lineAt(end - 1).text.length);

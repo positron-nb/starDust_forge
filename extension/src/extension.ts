@@ -11,7 +11,8 @@ import { TaskLedger } from './agent/ledger';
 import { Workspace } from './mcp/workspace';
 import { ContextIndex } from './context/index';
 import { resolveMentions } from './context/mentions';
-import { ChangeManager, type Proposal } from './changes/changeManager';
+import { ChangeManager, proposalKey, type Proposal } from './changes/changeManager';
+import type { EditSpec } from './changes/hunks';
 import { prepareProposal } from './changes/prepare';
 import { AgentRunner, type ApprovalDecision, type ApprovalRequest } from './trueforge/agentRunner';
 import { loadAgentSpec } from './trueforge/agentSpec';
@@ -22,14 +23,25 @@ import { INLINE_INSTRUCTIONS } from './trueforge/inlinePrompt';
 
 let mcp: EditorMcpServer | undefined;
 
-export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
+/** Returned by activate() so UI integration tests (test-ui/) can drive the same code paths TrueForge does. */
+export interface ForgeTestApi {
+  root: string;
+  /** Exactly what runs during a TrueForge approval pause (opens the hunk review for propose_edit). */
+  approve(req: ApprovalRequest): Promise<ApprovalDecision>;
+  /** What the propose_edit tool does when TrueForge executes the approved call. */
+  applyApproved(path: string, edits: EditSpec[]): Promise<{ ok: boolean; message: string }>;
+  /** Same work as the Cancel button (without a running model turn). */
+  cancelPending(): number;
+}
+
+export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeTestApi | undefined> {
   const out = vscode.window.createOutputChannel('Forge Agent');
   const log = (m: string) => out.appendLine(`[${new Date().toISOString()}] ${m}`);
   const cfg = () => vscode.workspace.getConfiguration('forge');
   const baseUrl = () => cfg().get<string>('baseUrl', 'http://localhost:8790');
 
   const folder = vscode.workspace.workspaceFolders?.[0];
-  if (!folder) { log('No workspace folder open; Forge Agent is idle.'); return; }
+  if (!folder) { log('No workspace folder open; Forge Agent is idle.'); return undefined; }
   const ws = new Workspace(folder.uri.fsPath);
 
   // ---- context engine ------------------------------------------------------------
@@ -67,13 +79,13 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     const r = new AgentRunner({ baseUrl: baseUrl(), models: cfg().get<string[]>('models', []), spec: loadAgentSpec(name, extraInstructions, { profile: cfg().get<'full' | 'lean'>('profile', 'full'), compactAt: cfg().get<number>('compactAtTokens', 0), reasoningEffort: cfg().get<string>('reasoningEffort', '') || undefined }),
       completionCheck: () => ledger.completionIssues(), handoff: () => ledger.handoff() });
     try { await mcp!.registerWithTrueForge(r.sdk, name); }
-    catch (err) { throw new Error(`Cannot reach TrueForge at ${baseUrl()}. Start it with: npx @truefoundry/trueforge@latest  (${(err as Error).message})`); }
+    catch (err) { throw new Error(`Cannot reach TrueForge at ${baseUrl()}. Start it with OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx @truefoundry/trueforge@0.185.0 (see README). Details: ${(err as Error).message}`); }
     return r;
   };
   let runner: AgentRunner | undefined;
   let runnerKey = '';
   const getRunner = async (): Promise<AgentRunner> => {
-    const key = JSON.stringify([baseUrl(), cfg().get('models'), cfg().get('mcpServerName')]);
+    const key = JSON.stringify([baseUrl(), cfg().get('models'), cfg().get('mcpServerName'), cfg().get('profile'), cfg().get('compactAtTokens'), cfg().get('reasoningEffort')]);
     if (!runner || key !== runnerKey) { runner = await makeRunner(); runnerKey = key; }
     return runner;
   };
@@ -154,6 +166,12 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     { dispose: () => void mcp?.stop() },
   );
   log(`Forge Agent active for ${ws.root}`);
+  return {
+    root: ws.root,
+    approve,
+    applyApproved: (p, edits) => changes.applyApproved(proposalKey(p, edits)),
+    cancelPending: () => { killAllCommands(); review.cancelAll(); return changes.cancelAll(); },
+  };
 }
 
 export async function deactivate(): Promise<void> { killAllCommands(); await mcp?.stop(); }

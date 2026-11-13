@@ -10,3 +10,5 @@ config/models.json
 problem_statement.pdf
 problem_statement.txt
 docs/WRITEUP.html
+*.vsix
+.vscode-test/

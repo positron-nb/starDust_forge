@@ -1,0 +1,45 @@
+{
+ "vscode": "1.146.0",
+ "results": [
+  {
+   "name": "all Forge commands are registered",
+   "ok": true
+  },
+  {
+   "name": "agent panel view opens",
+   "ok": true
+  },
+  {
+   "name": "proposed edit opens a native diff editor; nothing is written before review",
+   "ok": true
+  },
+  {
+   "name": "accept hunk 1, reject hunk 2, apply → only the accepted hunk reaches disk",
+   "ok": true
+  },
+  {
+   "name": "Forge: Undo Last Applied Change restores the file",
+   "ok": true
+  },
+  {
+   "name": "reject all → approval denied, workspace unchanged",
+   "ok": true
+  },
+  {
+   "name": "cancel after approval but before execution → nothing is written",
+   "ok": true
+  },
+  {
+   "name": "file changed on disk after review → edit refused as stale",
+   "ok": true
+  },
+  {
+   "name": "edit that deletes an existing function is refused before any diff is shown",
+   "ok": true
+  },
+  {
+   "name": "edit that makes the file invalid Python is refused",
+   "ok": true
+  }
+ ]
+}

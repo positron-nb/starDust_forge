@@ -61,3 +61,15 @@ describe('error summaries and deferred tools', () => {
     expect(unwrapDeferred('read_file', 'x', {}).deferred).toBe(false);
   });
 });
+
+describe('default auto-approve command patterns (package.json)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const defaults: string[] = require('../package.json').contributes.configuration.properties['forge.autoApproveCommands'].default;
+  const ok = (c: string) => defaults.some(r => new RegExp(r).test(c));
+  it('allows read-only checks and tests', () => {
+    for (const c of ['python -m pytest tests/test_cli.py -q', 'pytest tests', 'git status --short', 'git diff --check', 'python -m flask --help', 'flask --app x config']) expect(ok(c), c).toBe(true);
+  });
+  it('does not allow anything else', () => {
+    for (const c of ['rm -rf x', 'git push', 'git checkout -- .', 'pytestx', 'python -c "print(1)"', 'pip install x']) expect(ok(c), c).toBe(false);
+  });
+});

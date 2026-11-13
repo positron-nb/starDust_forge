@@ -155,8 +155,11 @@ export class ReviewController implements vscode.TextDocumentContentProvider, vsc
 /** FileIO backed by the editor: writes are WorkspaceEdits (so Ctrl+Z works) followed by a save. */
 export const vscodeIO = {
   async read(abs: string): Promise<string | undefined> {
+    // Unsaved editor content wins (the user is typing); otherwise the disk is the source of truth.
+    // VS Code's in-memory document can lag behind an external change, and trusting it would let
+    // the stale-file check pass and overwrite that change.
     const open = vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file' && d.uri.fsPath.toLowerCase() === abs.toLowerCase());
-    if (open) return open.getText();
+    if (open?.isDirty) return open.getText();
     try { return new TextDecoder().decode(await vscode.workspace.fs.readFile(vscode.Uri.file(abs))); } catch { return undefined; }
   },
   async write(abs: string, text: string): Promise<void> {
@@ -168,7 +171,9 @@ export const vscodeIO = {
     const doc = await vscode.workspace.openTextDocument(uri);
     we.replace(uri, doc.validateRange(new vscode.Range(0, 0, doc.lineCount + 1, 0)), text);
     if (!(await vscode.workspace.applyEdit(we))) throw new Error(`VS Code refused the edit to ${abs}`);
-    await doc.save();
+    // save() returns false on a save conflict (model older than disk); the reviewed text must
+    // still land, so write it directly in that case.
+    if (!(await doc.save())) await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(text));
   },
   async remove(abs: string): Promise<void> { await vscode.workspace.fs.delete(vscode.Uri.file(abs), { useTrash: false }); },
 };

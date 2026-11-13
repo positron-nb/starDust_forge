@@ -146,8 +146,8 @@
           },
           "default": [
             "^(python -m )?pytest(\\s|$)",
-            "^flask( --app \\S+)? (--help|routes|config)\b",
-            "^git (status|diff|log)\b"
+            "^(python -m )?flask( --app \\S+)? (--help|routes|config)\\b",
+            "^git (status|diff|log)\\b"
           ],
           "description": "Regexes for commands the agent may run without a confirmation prompt (TrueForge still pauses; the extension approves). Everything else asks."
         },
@@ -244,7 +244,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build:ext": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap",
-    "build:scripts": "esbuild scripts/e2e-edit.ts scripts/e2e-tools.ts scripts/ctx.ts scripts/smoke.ts scripts/ping.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outdir=out"
+    "build:scripts": "esbuild scripts/e2e-edit.ts scripts/e2e-tools.ts scripts/ctx.ts scripts/smoke.ts scripts/ping.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outdir=out",
+    "build:uitest": "esbuild test-ui/suite.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/ui-suite.js && esbuild test-ui/run.ts --bundle --platform=node --format=cjs --target=node20 --packages=external --outfile=out/ui-run.js",
+    "test:ui": "npm run build:ext && npm run build:uitest && node out/ui-run.js",
+    "package": "npm run build:ext && vsce package --no-dependencies -o forge-agent.vsix"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -255,8 +258,14 @@
   "devDependencies": {
     "@types/node": "^22.20.5",
     "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.1",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/positron-nb/starDust_forge.git"
   }
 }

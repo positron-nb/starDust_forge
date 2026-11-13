@@ -53,11 +53,12 @@ const mcp = new EditorMcpServer(s => {
     extra = INLINE_INSTRUCTIONS;
   }
   await mcp.start();
-  const runner = new AgentRunner({ baseUrl: 'http://localhost:8790', models: models.split(','), spec: loadAgentSpec('forge-workspace', extra, { profile: (process.env.FORGE_PROFILE as 'full' | 'lean') ?? 'full', compactAt: Number(process.env.FORGE_COMPACT_AT ?? 0), reasoningEffort: process.env.FORGE_REASONING || undefined }) });
+  const runner = new AgentRunner({ baseUrl: 'http://localhost:8790', models: models.split(','), spec: loadAgentSpec('forge-workspace', extra, { profile: (process.env.FORGE_PROFILE as 'full' | 'lean') ?? 'full', compactAt: Number(process.env.FORGE_COMPACT_AT ?? 0), reasoningEffort: process.env.FORGE_REASONING || undefined }),
+    completionCheck: () => ledger.completionIssues(), handoff: () => ledger.handoff() });
   console.log(`[config] profile=${process.env.FORGE_PROFILE ?? 'full'} compactAt=${process.env.FORGE_COMPACT_AT ?? 'default'} reasoning=${process.env.FORGE_REASONING ?? 'default'}`);
   await mcp.registerWithTrueForge(runner.sdk, 'forge-workspace');
   changes.beginRun('e2e');
-  ledger.reset(message);
+  ledger.reset(message, m ? 'inline' : 'agent');
   const t0 = Date.now();
   const r = await runner.run(message, {
     onStatus: (s, l) => console.log(`[${l}] ${s}`),
@@ -74,7 +75,7 @@ const mcp = new EditorMcpServer(s => {
   });
   const files = [...new Set(changes.appliedInRun(changes.runId).map(u => u.path))];
   console.log(`\nRESULT ${r.status} on ${r.model} in ${Math.round((Date.now() - t0) / 1000)}s; files written: ${files.join(', ') || 'none'}\n${(r.output ?? r.error ?? '').slice(0, 800)}`);
-  console.log(`[ledger] reads=${ledger.totalReads} duplicate_reads=${ledger.duplicateReads} edits=${ledger.edits.length} refused=${ledger.rejected.length} last_test=${ledger.lastTest?.summary ?? 'none'}`);
+  console.log(`[ledger] reads=${ledger.totalReads} duplicate_reads=${ledger.duplicateReads} edits=${ledger.edits.length} refused=${ledger.rejected.length} last_test=${ledger.lastTest?.summary ?? 'none'} planned=${ledger.plannedFiles.join(',') || 'none'} pending=${ledger.pendingPlanned().join(',') || 'none'}`);
   await mcp.stop();
   process.exit(r.status === 'done' ? 0 : 1);
 })();

@@ -1,0 +1,15 @@
+src/**
+test/**
+test-ui/**
+scripts/**
+node_modules/**
+out/*.map
+out/e2e-*.js
+out/ctx.js
+out/smoke.js
+out/ping.js
+out/ui-*.js
+out/p.js
+tsconfig.json
+*.vsix
+.vscode-test/**
