@@ -1,0 +1,13 @@
+.F                                                                       [100%]
+================================== FAILURES ===================================
+______________________________ test_ten_percent _______________________________
+
+    def test_ten_percent():
+>       assert cart_total([50, 50], 10) == 90
+E       assert -900 == 90
+E        +  where -900 = cart_total([50, 50], 10)
+
+tests\test_cart.py:9: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cart.py::test_ten_percent - assert -900 == 90
+1 failed, 1 passed in 0.12s

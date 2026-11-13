@@ -158,7 +158,7 @@
             "lean"
           ],
           "default": "full",
-          "markdownDescription": "`full`: deferred tool loading, sub-agents and ask-user questions (shows TrueForge features). `lean`: all workspace tools preloaded, no sub-agents or ask-user \u2014 ~1.3k fewer prompt tokens per request and no tool-discovery calls; best for small/free models."
+          "markdownDescription": "`full`: deferred tool loading, sub-agents and ask-user questions (shows TrueForge features). `lean`: all workspace tools preloaded, no sub-agents or ask-user — ~1.3k fewer prompt tokens per request and no tool-discovery calls; best for small/free models."
         },
         "forge.compactAtTokens": {
           "type": "number",
@@ -248,7 +248,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "@truefoundry/trueforge-sdk": "^0.184.1",
+    "@truefoundry/trueforge-sdk": "0.185.0",
     "diff": "^8.0.4",
     "zod": "^4.6.7"
   },

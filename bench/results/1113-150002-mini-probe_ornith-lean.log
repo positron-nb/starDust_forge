@@ -1,0 +1,10 @@
+[config] profile=lean compactAt=100000 reasoning=none
+[session] http://localhost:8790/sessions/01m7a3w79n7951zv6qrjnb7e30 (probe/ornith)
+  [tool] get_context {"query":"discount cart total negative 10% 100","budget_tokens":10000}
+  [context] 190/10000 tok → tests/test_cart.py, shop/pricing.py, shop/cart.py
+[error] probe/ornith failed: stream ended without turn.done No more fallback models configured.
+
+RESULT error on probe/ornith in 335s; files written: none
+stream ended without turn.done
+[ledger] reads=0 duplicate_reads=0 edits=0 refused=0 last_test=none
+exit=1

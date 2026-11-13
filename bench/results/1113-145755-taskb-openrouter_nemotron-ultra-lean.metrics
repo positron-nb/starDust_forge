@@ -1,0 +1,2 @@
+{"model":"openrouter/nemotron-ultra","session":"vpzweac4","requests":20,"in_tok":363543,"out_tok":2076,"max_in":25661,"cached":0,"tool_calls":20,"tool_errors":5,"model_errors":0,"compactions":0,"dup_reads":0,"secs":80,"tools":"get_context×1 read_file×12 search_workspace×5 task_state×1 propose_edit×1"}
+TOTAL requests=20 in=363543 out=2076 cached=0 tool_calls=20 tool_errors=5 model_errors=0 compactions=0 dup_reads=0 secs=80

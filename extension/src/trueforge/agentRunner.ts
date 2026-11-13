@@ -131,17 +131,25 @@ export class AgentRunner {
     return { status: 'error', error: 'all models failed' };
   }
 
-  /** Runs one user turn plus any approval-resume turns until the agent is done. */
+  /**
+   * Runs one user turn until the agent is done. TrueForge ≥ 0.185 pauses the SAME turn for
+   * approvals (`turn.update {status:"paused"}`): we answer with createTurnEvents on that turn
+   * and resume the SSE stream after the last event we saw (subscribeToTurn, afterEventId).
+   * Older servers ended the turn (`turn.done` + required actions) and expected a new turn with
+   * `user.tool_approval` inputs; that path is still supported.
+   */
   private async driveTurns(input: Input, hooks: RunHooks): Promise<RunResult> {
-    let nextInput: Input | undefined = input;
-    while (nextInput) {
-      const events = new Map<string, Ev>();
+    const events = new Map<string, Ev>();
+    const sid = this.sessionId!;
+    let turnId: string | undefined;
+    let lastId: string | undefined;
+    this.abort = new AbortController();
+    const opts = { abortSignal: this.abort.signal, timeoutInSeconds: 900 };
+    let stream = await this.client.sessions.createTurnStream(sid, { input }, opts);
+    for (;;) {
       const approvals: TrueForgeApi.ToolApprovalRequiredEvent[] = [];
       let done: TrueForgeApi.TurnDoneEvent | undefined;
-
-      this.abort = new AbortController();
-      const stream = await this.client.sessions.createTurnStream(this.sessionId!, { input: nextInput },
-        { abortSignal: this.abort.signal, timeoutInSeconds: 900 });
+      let paused = false;
       for await (const { data: e } of stream.withMetadata()) {
         if (isEventDelta(e)) {
           const base = events.get(e.id);
@@ -149,23 +157,31 @@ export class AgentRunner {
           hooks.onEvent?.(e, base);
           continue;
         }
+        if (events.has(e.id)) continue; // replayed on resume
         events.set(e.id, e);
+        lastId = e.id;
         hooks.onEvent?.(e);
+        if (e.type === 'turn.created') turnId = (e as TrueForgeApi.TurnCreatedEvent).turnId;
         if (e.type === 'tool.approval_required') approvals.push(e);
-        if (e.type === 'turn.done') done = e;
+        if (e.type === 'turn.update' && (e as { state?: { status?: string } }).state?.status === 'paused') { paused = true; break; }
+        if (e.type === 'turn.done') { done = e; break; }
       }
       if (this.cancelled) return { status: 'cancelled' };
-      if (!done) return { status: 'error', error: 'stream ended without turn.done' };
 
-      const state = done.state as { status: string; message?: string; output?: { content?: unknown } };
-      if (state.status === 'error') return { status: 'error', error: state.message ?? 'model error' };
-      if (state.status === 'cancelled') return { status: 'cancelled' };
-      if (approvals.length === 0) {
-        return { status: 'done', output: typeof state.output?.content === 'string' ? state.output.content : '' };
+      let legacyResume = false;
+      if (done) {
+        const state = done.state as { status: string; message?: string; output?: { content?: unknown } };
+        if (state.status === 'error') return { status: 'error', error: state.message ?? 'model error' };
+        if (state.status === 'cancelled') return { status: 'cancelled' };
+        if (approvals.length === 0) return { status: 'done', output: typeof state.output?.content === 'string' ? state.output.content : '' };
+        legacyResume = true; // old protocol: turn ended waiting for approval
+      } else if (!paused) {
+        if (approvals.length === 0) return { status: 'error', error: 'stream ended without turn.done' };
+        paused = true; // stream closed at the pause
       }
 
       // Paused for approval: ask the editor (diff review) for each call, then resume.
-      const decisions: Input = [];
+      const decisions: TrueForgeApi.UserToolApprovalInputEvent[] = [];
       for (const pause of approvals) {
         for (const ref of pause.toolCalls) {
           const src = events.get(ref.sourceEventId) as TrueForgeApi.ModelMessageEvent | undefined;
@@ -181,9 +197,13 @@ export class AgentRunner {
             approval: d.allow ? { status: 'allow' } : { status: 'deny', reason: d.reason ?? 'Rejected by the user in diff review.' } });
         }
       }
-      nextInput = decisions;
+      if (legacyResume || !turnId) {
+        stream = await this.client.sessions.createTurnStream(sid, { input: decisions as never }, opts);
+      } else {
+        await this.client.sessions.createTurnEvents(sid, turnId, { events: decisions });
+        stream = await this.client.sessions.subscribeToTurn(sid, turnId, lastId ? { afterEventId: lastId } : {}, opts);
+      }
     }
-    return { status: 'done' };
   }
 }
 
