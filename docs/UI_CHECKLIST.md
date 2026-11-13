@@ -2,6 +2,16 @@
 
 Headless tests UI ko verify nahi karte, isliye yeh 13 checks aapko VS Code mein khud karne hain. Har check ke saamne ✅/❌ likho, aur ❌ wale ka screenshot bhejo.
 
+## Kya pehle se automatic verify hai
+`npm run test:ui` asli VS Code ke andar 10 tests chalata hai (13 Nov ko 10/10 pass, `demo/ui-tests-report.json`). Yeh cheezein usme cover hain:
+- diff editor khulna aur per-hunk CodeLens (check 2 ka mechanism);
+- hunk accept/reject, apply, sirf accepted hunk ka disk pe jaana (checks 3–4);
+- undo (check 5);
+- cancel ke baad koi aadha edit na hona (check 8 ka mechanism);
+- sab reject karne par workspace unchanged (check 13 ka mechanism).
+
+Tests model ke bina chalte hain, isliye **screen pe dikhne wali cheezein** aapko hi dekhni hain: inline edit ka input box, streaming, context table, budget bar, TrueForge session link, fallback message. Neeche ke 13 checks isi liye hain.
+
 ## Setup (ek baar)
 1. **TrueForge chalao.** PowerShell mein, repo folder se:
    `$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@0.185.0`

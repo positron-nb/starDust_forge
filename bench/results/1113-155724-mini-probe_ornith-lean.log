@@ -1,0 +1,17 @@
+[config] profile=lean compactAt=100000 reasoning=none
+[session] http://localhost:8790/sessions/01m7a758zgbtf54m2yddwmgn5b (probe/ornith)
+  [tool] get_context {"query":"discount calculation negative total 10% 100 cart","budget_tokens":10000}
+  [context] 190/10000 tok → tests/test_cart.py, shop/pricing.py, shop/cart.py
+  [review] shop/pricing.py: 1 hunk(s) → accept all
+  [tool] propose_edit {"path":"shop/pricing.py","edits":1}
+  [approve cmd] {"commands":[{"argv":["python","-m","pytest","tests/test_cart.py","-q"],"timeout":30}]}
+  [tool] run_commands {"commands":["python -m pytest tests/test_cart.py -q"],"fail_fast":false}
+
+RESULT done on probe/ornith in 18s; files written: shop/pricing.py
+Fixed. The bug was in `shop/pricing.py` — `apply_discount` used `percent` directly instead of `percent / 100`, so a 10% discount was treated as 1000% off.
+
+**Change:** `price - price * percent` → `price - price * percent / 100`
+
+**Verification:** `pytest tests/test_cart.py` — 2 tests pass.
+[ledger] reads=0 duplicate_reads=0 edits=1 refused=0 last_test=2 passed in 0.02s planned=none pending=none
+exit=0

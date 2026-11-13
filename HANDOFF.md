@@ -1,29 +1,39 @@
 # Handoff
 
-## State (2026-11-06, end of Phase 2)
-- TrueForge running locally (npx, :8790) with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'`.
-- Models configured in TrueForge: google-gemini (free tier, 5 RPM). Test provider `broken/dead-model` → `http://127.0.0.1:9/v1` (for Task C).
-- `extension/` builds (`npm run build`), typechecks, 8 unit tests pass (`npx vitest run`).
-- Headless smoke (`extension/scripts/smoke.ts`) VERIFIED: automatic fallback broken→gemini, 429 retry honouring hint, agent discovers get_debug_flag via our MCP tools on Flask, cancel → 'cancelled' in ~4s.
-- Agent definition: `agent/forge-coder.json` (snake_case HTTP format; converted in `src/trueforge/agentSpec.ts`).
-- Flask at `flask/` @ 22d92470.
+## State (13 Nov 2026)
+- **Repo:** <https://github.com/positron-nb/starDust_forge> (public, branch `master`). Commits are authored by `positron-nb`; no co-author trailers.
+- **TrueForge:** local, pinned to 0.185.0, started with the loopback allow-list (see README). SDK 0.185.0.
+- **Providers configured in TrueForge (keys live only there):** `google-gemini`, `openrouter` (Nemotron models), `groq` (via local shim), `local-ollama`, `probe` (local Ollama via proxy on 8792), `broken` (dead endpoint for Task C).
+- **Flask:** `flask/` at `22d92470`, `.venv` with pytest 8.4.2. Baseline: `tests/test_cli.py` 58 passed; whole suite 489 passed, 1 failed (`test_reqctx::test_bad_environ_raises_bad_request`, pre-existing).
 
-## Not yet done / unverified
-- Extension never launched inside VS Code yet (panel UI unverified visually).
-- Tools still read-only: no find_symbol/get_context/propose_edit/run_command; approvals are auto-denied.
+## Verified
+| What | Evidence |
+|---|---|
+| Unit tests | `npm test`: 65 passed |
+| Review UI in real VS Code | `npm run test:ui`: 10/10 (`demo/ui-tests-report.json`) |
+| Clean clone | `npm ci`, build, tests and typecheck pass on a fresh clone |
+| VSIX | `npm run package` builds `forge-agent.vsix` (341 KB); installs with `code --install-extension` |
+| Task A (headless) | off/OFF/n/N/0 → False, 1 → True; docstring lists the false values; `test_helpers.py` 35 passed |
+| Task B (headless) | passes on Nemotron Ultra (61 passed), Gemini (59 passed) and Groq→Gemini handoff (59 passed); 3 files each, no deletions |
+| Task C (headless) | dead endpoint → automatic fallback → edit; Flask restored clean |
+
+## Not verified (needs a person)
+- Inline edit input box, streaming in the panel, context table and budget bar, TrueForge session link, and fallback messages **as seen on screen** (`docs/UI_CHECKLIST.md`).
+- The video and its scorecard timestamps (`docs/DEMO_SCRIPT.md`).
+- Team details in `docs/WRITEUP.md`.
+- Nemotron Task B with the plan gates and handoff (OpenRouter quota was used up on 13 Nov).
 
 ## Commands
 ```bash
-OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx -y @truefoundry/trueforge@latest
-cd extension && npm run build && npx vitest run
-npx esbuild scripts/smoke.ts --bundle --platform=node --format=cjs --outfile=out/smoke.js && node out/smoke.js ../flask google-gemini/gemini-3-5-flash,google-gemini/gemini-3-1-flash-lite
+OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx -y @truefoundry/trueforge@0.185.0
+cd extension && npm ci && npm run build && npm test && npm run test:ui
+bench/preflight.sh openrouter/nemotron-ultra 100000
+bench/run.sh taskb openrouter/nemotron-ultra,google-gemini/gemini-3-5-flash,google-gemini/gemini-3-1-flash-lite lean 100000
+python scripts/writeup-pdf.py
 ```
 
-## Next steps
-1. Human: launch extension (F5 / Extension Development Host) on flask/ and check the panel.
-2. Phase 3: find_symbol, run_command (approval-gated). Phase 4: get_context engine. Phase 5: propose_edit + hunk review driven by tool.approval_required.
-
-## Update (Phase 5 implemented, unverified in editor)
-- propose_edit (approval-gated) → ReviewController diff + per-hunk Alt+Y/Alt+N, CodeLens, panel review card → ChangeManager writes only accepted hunks; undo (forge.undoLast / forge.undoRun); cancel drops unapplied approvals.
-- Inline edit: Ctrl+Alt+E (src/ui/inlineEdit.ts).
-- NEXT: (1) headless E2E of Task A edit; (2) user tests Ctrl+Alt+E on get_debug_flag in VS Code; (3) Task B rehearsal; (4) Phase 6-8.
+## Known traps
+- `npx @truefoundry/trueforge@latest` can change the protocol (0.185 did). Keep the version pinned.
+- OpenRouter free: 50 requests/day, reset at 05:30 IST; failed requests count.
+- Do not write TS/JS through shell heredocs: `\n` and `\b` get mangled. Use the editor tools.
+- The GitHub token has no `workflow` scope, so the CI file lives in `docs/github-ci.yml`.

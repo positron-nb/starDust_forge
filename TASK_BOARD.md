@@ -15,7 +15,7 @@
 | P2 | Extension foundation (panel, client, streaming, cancel, fallback) | TESTED (headless smoke + 10 unit tests; panel VERIFIED in VS Code by user) |
 | P3 | Workspace MCP tools (read/list/search/find_symbol/get_context/run_command) | TESTED (19 unit tests + headless E2E on Flask) |
 | P4 | Context engine (@file/@symbol, BM25+graph retrieval, budget, reasons, panel table) | TESTED (headless); panel table not yet seen in VS Code |
-| P5 | Inline edit + diff review (hunks, undo, rollback) | TESTED (unit + headless). UI NOT yet verified by user (docs/UI_CHECKLIST.md checks 1–5). |
+| P5 | Inline edit + diff review (hunks, undo, rollback) | VERIFIED by integration tests in real VS Code 1.146 (`npm run test:ui`, 10/10): diff editor, per-hunk accept/reject, apply, undo, cancel, stale file, guards. On-screen look (input box, decorations) still to be seen by a person. |
 | P6 | Fallback, errors, consistency checks | VERIFIED headless (dead endpoint, 429/503 wait hints, fallback chain) |
 | P7a | Task A headless | VERIFIED 9 Nov (Gemini, after dead-endpoint fallback): off/OFF/n/N/0/no/FALSE/unset → False, 1/yes → True; docstring lists 0/false/no/off/n; test_helpers 35 passed. UI path NOT yet verified (docs/UI_CHECKLIST.md). |
 | P7b | Task B headless | VERIFIED 9 Nov on OpenRouter nemotron-3-ultra:free (lean, compaction 100k): 3 files, test_cli 61 passed, full suite 492 passed + 1 pre-existing failure, masked output OK, 0 deletions. 54 requests (target 20–25 not met). Also VERIFIED on Gemini free (3.5 Flash → flash-lite fallback): 3 files, 59 passed, 47 requests. |
@@ -32,7 +32,11 @@
 | F9 | Existing-test guard (no rewriting pre-run tests) | TESTED (unit + replay on the real failing Gemini edit) |
 | F10 | Cancel keybinding moved to Ctrl+Alt+C (Ctrl+Shift+Esc is captured by Windows) | DONE |
 | H1 | Team details in write-up | PENDING (user) |
-| H2 | UI checklist (13 checks) | PENDING (user), docs/UI_CHECKLIST.md |
+| H2 | UI checklist (13 checks) | PENDING (user) for on-screen items; mechanisms for checks 2–5, 8, 13 covered by `npm run test:ui` |
 | H3 | 4-min video + scorecard timestamps | PENDING (user), docs/DEMO_SCRIPT.md |
 | F11 | TrueForge 0.185 approval protocol (paused turn, createTurnEvents, subscribeToTurn) | VERIFIED (mini, Task A+C, Task B) |
 | F12 | Plan gates (planned_files, edits-before-verify), completion check, fallback handoff | VERIFIED 13 Nov: Groq→Gemini Flash-Lite Task B pass (59 tests, 40 requests). Nemotron with gates: pending quota |
+| F13 | UI integration tests in real VS Code | VERIFIED 10/10; found and fixed a stale-file bug (lagging editor buffer) |
+| F14 | Auto-approve regex defaults (`\b` was a backspace in JSON) | FIXED + unit test |
+| F15 | VSIX packaging, clean-clone check, CI workflow file | VERIFIED locally (CI file in docs/, needs `workflow` token scope to enable) |
+| F16 | ARCHITECTURE / HANDOFF / RISKS rewritten to current state | DONE |

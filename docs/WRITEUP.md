@@ -19,6 +19,8 @@ The VS Code extension is a **TrueForge client**; TrueForge runs the agent loop i
 - **Edit guards before review:** an edit is refused if it would delete a definition that existed before the run (function, class or module-level assignment), **rewrite an existing test**, or make a Python file invalid (`ast.parse`). Verification runs as one approval-gated `run_commands` batch: argv lists without a shell, per-command exit codes and timeouts, and full logs saved to a file. Tolerant matching accepts unique matches only, and a file that changed after review is never written.
 - **Resilience:** model failures arrive as `turn.done{status:"error","[Model Error] …"}`. The runner retries transient errors with exponential backoff (honouring provider wait hints such as "retry in N s" and "try again in N s"; up to 8 waits when the provider states a wait of 65 s or less) and then **falls back automatically** to the next model in `forge.models` on a fresh session; errors are summarised in one line.
 
+- **Testing:** 65 unit tests; 10 integration tests that run inside a real VS Code extension host and drive the review UI (diff editor, per-hunk accept/reject, apply, undo, cancel, stale file, guards); and a headless benchmark harness on the real TrueForge pipeline. The integration tests found a real bug (the stale-file check trusted a lagging editor buffer), now fixed.
+
 ## 4. How context is selected
 Retrieval is lexical + structural, budgeted, and explained (`extension/src/context/`):
 1. Incremental index of code and docs into symbol chunks (Python by indentation, C-like by braces, rst/md by section); Flask: 165 files / 2,084 symbols in ≈210 ms.

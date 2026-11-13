@@ -55,11 +55,19 @@ Then set `forge.models` to `["local-ollama/qwen3-forge", "google-gemini/gemini-3
 ### 3. Build and run the extension
 ```bash
 cd extension
-npm install
+npm ci
 npm run build
-npx vitest run          # unit tests
+npm test                # 65 unit tests
+npm run test:ui         # 10 integration tests inside a real VS Code (diff review, apply, undo, cancel, guards)
 code --extensionDevelopmentPath="$PWD" /path/to/your/repo
 ```
+Or install it as a normal extension:
+```bash
+npm run package                                  # builds extension/forge-agent.vsix
+code --install-extension forge-agent.vsix
+```
+`npm run test:ui` uses the installed VS Code with a throwaway profile (set `VSCODE_EXE` to choose another build). A CI workflow that runs typecheck, unit tests, build and packaging is in [`docs/github-ci.yml`](docs/github-ci.yml); copy it to `.github/workflows/ci.yml` to enable it (pushing it needs a token with the `workflow` scope).
+
 Open the **Forge Agent** view in the activity bar. Settings:
 
 | Setting | Default | Meaning |

@@ -24,3 +24,6 @@ poc/                  phase-1 scripts
 config/               models.example.json, agent spec
 docs/                 write-up, demo script, scorecard
 ```
+
+## Status on 13 Nov
+P0–P7 are done and verified headless (see TASK_BOARD.md and HANDOFF.md). Remaining: on-screen UI checklist, team details, the video and its scorecard timestamps (P8), then submission.
