@@ -4,7 +4,7 @@ Headless tests UI ko verify nahi karte, isliye yeh 13 checks aapko VS Code mein 
 
 ## Setup (ek baar)
 1. **TrueForge chalao.** PowerShell mein, repo folder se:
-   `$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@latest`
+   `$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@0.185.0`
    Yeh window khuli rehne do.
 2. **Extension build karo.** Dusre terminal mein: `cd extension; npm run build`
 3. **Extension Development Host kholo.** VS Code mein `extension` folder kholo → **F5** dabao (ya Run → Start Debugging). Ek nayi VS Code window khulegi. Usme **File → Open Folder → `flask`** kholo.

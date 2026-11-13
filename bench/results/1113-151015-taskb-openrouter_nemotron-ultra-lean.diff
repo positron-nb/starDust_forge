@@ -1,0 +1,48 @@
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..b201de1b 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -4,6 +4,7 @@ import ast
+ import collections.abc as cabc
+ import importlib.metadata
+ import inspect
++import json
+ import os
+ import platform
+ import re
+@@ -594,6 +595,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1117,27 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the app config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the application configuration.
++
++    Configuration values containing SECRET, PASSWORD, TOKEN, or KEY
++    are masked as "***" for security.
++    """
++    config = current_app.config
++    masked = {}
++    sensitive_patterns = ("SECRET", "PASSWORD", "TOKEN", "KEY")
++
++    for key, value in sorted(config.items()):
++        if any(pattern in key.upper() for pattern in sensitive_patterns):
++            masked[key] = "***"
++        else:
++            masked[key] = value
++
++    click.echo(json.dumps(masked, indent=2, default=str))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\

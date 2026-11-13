@@ -1,0 +1,2 @@
+{"model":"openrouter/nemotron-ultra","session":"3ts8cndw","requests":37,"in_tok":1379958,"out_tok":5008,"max_in":47260,"cached":0,"tool_calls":39,"tool_errors":4,"model_errors":3,"compactions":0,"dup_reads":0,"secs":159,"tools":"get_context×1 read_file×14 search_workspace×1 task_state×1 propose_edit×4 run_commands×18"}
+TOTAL requests=37 in=1379958 out=5008 cached=0 tool_calls=39 tool_errors=4 model_errors=3 compactions=0 dup_reads=0 secs=159

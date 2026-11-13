@@ -2,7 +2,7 @@
 
 ## Before recording (checklist)
 1. **TrueForge running** (PowerShell, from the repo root):
-   `$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@latest`
+   `$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@0.185.0`
    Leave this window open.
 2. **Flask clean:** `git -C flask status --short` prints nothing, and `git -C flask rev-parse --short=8 HEAD` prints `22d92470`.
 3. **Quota:** record after 05:30 IST, because OpenRouter's 50 requests/day reset at 00:00 UTC. Task B needs about 50 requests, so **do not run any other test on OpenRouter that day**. Task A uses Gemini.

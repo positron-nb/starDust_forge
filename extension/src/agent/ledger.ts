@@ -20,12 +20,15 @@ export class TaskLedger {
   lastTest?: { command: string; exitCode: number | null; summary: string };
   duplicateReads = 0;
   totalReads = 0;
+  /** Command calls since the last applied edit (verification-loop brake). */
+  commandsSinceEdit = 0;
+  static readonly MAX_COMMANDS_WITHOUT_EDIT = 4;
 
   reset(task: string): void {
     this.task = task; this.plan = ''; this.next = '';
     this.reads.clear(); this.discovered.clear(); this.symbols.clear();
     this.edits.length = 0; this.rejected.length = 0; this.lastTest = undefined;
-    this.duplicateReads = 0; this.totalReads = 0;
+    this.duplicateReads = 0; this.totalReads = 0; this.commandsSinceEdit = 0;
   }
 
   static hash(text: string): string { return crypto.createHash('sha1').update(text).digest('hex').slice(0, 10); }
@@ -45,7 +48,13 @@ export class TaskLedger {
     return dup;
   }
 
-  recordEdit(path: string, summary: string): void { this.edits.push({ path, summary }); this.reads.delete(path); }
+  recordEdit(path: string, summary: string): void { this.edits.push({ path, summary }); this.reads.delete(path); this.commandsSinceEdit = 0; }
+
+  /** Returns a refusal message when too many command calls ran without an edit in between. */
+  commandBrake(): string | undefined {
+    if (++this.commandsSinceEdit <= TaskLedger.MAX_COMMANDS_WITHOUT_EDIT) return undefined;
+    return `Refused: ${this.commandsSinceEdit - 1} command calls in a row without an edit. Stop probing. Read the last failing output above, then either fix the code/tests with propose_edit, or finish with a summary that states what is still failing. (Commands are allowed again after your next applied edit.)`;
+  }
   recordRejected(path: string, reason: string): void { this.rejected.push({ path, reason: reason.slice(0, 200) }); }
 
   recordCommand(command: string, exitCode: number | null, output: string): void {

@@ -26,13 +26,13 @@ Requirements: Node ≥ 22.14, VS Code ≥ 1.95, Git. Python 3.10+ only for the F
 The extension's MCP server listens on `127.0.0.1`; TrueForge's outbound SSRF guard blocks loopback unless it is allow-listed:
 
 ```bash
-OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx @truefoundry/trueforge@latest
+OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx @truefoundry/trueforge@0.185.0
 ```
 PowerShell:
 ```powershell
-$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@latest
+$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@0.185.0
 ```
-TrueForge UI/API: <http://localhost:8790>. Tested with TrueForge @ `9900d65` (2026-11-05) and SDK `0.184.1`.
+TrueForge UI/API: <http://localhost:8790>. Tested with TrueForge **0.185.0** and SDK `0.185.0` (pin the version: 0.185 changed the approval protocol). Older servers that end the turn for approval are still supported.
 
 ### 2. Configure models and load the agent definition
 Either add a provider in the TrueForge UI (**Settings → Models**), or:

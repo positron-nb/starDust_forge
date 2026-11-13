@@ -76,3 +76,14 @@ describe('lean profile keeps rarely used tools deferred', () => {
     expect(srv.preloadTools).not.toContain('run_command');
   });
 });
+
+describe('verification-loop brake', () => {
+  it('refuses the 5th consecutive command call without an edit, resets after an edit', () => {
+    const l = new TaskLedger();
+    l.reset('t');
+    for (let i = 0; i < 4; i++) expect(l.commandBrake()).toBeUndefined();
+    expect(l.commandBrake()).toMatch(/Refused: 4 command calls in a row/);
+    l.recordEdit('a.py', 'fix');
+    expect(l.commandBrake()).toBeUndefined();
+  });
+});

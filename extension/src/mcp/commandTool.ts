@@ -78,6 +78,8 @@ export function installCommandTool(server: McpServer, d: { ws: Workspace; onTool
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, async ({ command, cwd, timeout_seconds }) => {
     d.onToolCall?.('run_command', { command, cwd });
+    const brake = d.ledger?.commandBrake();
+    if (brake) return { content: [{ type: 'text' as const, text: brake }], isError: true };
     const denied = isHardDenied(command);
     if (denied) return { content: [{ type: 'text' as const, text: `Error: ${denied}` }], isError: true };
     let dir: string;
@@ -135,6 +137,8 @@ export function installBatchCommandTool(server: McpServer, d: { ws: Workspace; o
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, async ({ commands, fail_fast }) => {
     d.onToolCall?.('run_commands', { commands: commands.map(c => c.argv.join(' ')), fail_fast });
+    const brake = d.ledger?.commandBrake();
+    if (brake) return { content: [{ type: 'text' as const, text: brake }], isError: true };
     const logs: string[] = [];
     const results: string[] = [];
     let failed = 0;

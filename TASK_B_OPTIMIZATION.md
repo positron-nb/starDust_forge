@@ -85,3 +85,14 @@ It checks that Flask is clean at `22d92470`, that 58 baseline tests pass, that T
   - It **rewrote an existing test**, which the removal guard did not catch because the name still existed.
   - Fix: a new guard. In test files, the text of every test that existed before the run must stay identical; the agent may add tests and rework its own. A replay on the real before/after files flags `test_prepare_import`.
 - **Status:** the target of <40 requests on Task B with batch verification is **not yet measured on a capable model**. The OpenRouter Nemotron quota was used up by the passing run earlier that day. Next run: after the 05:30 IST reset, using `bench/preflight.sh` and then `bench/run.sh taskb openrouter/nemotron-ultra lean 100000`.
+
+## 6. TrueForge 0.185 and the verification-loop brake (13 Nov)
+- **Breaking server change:** `npx @truefoundry/trueforge@latest` became **0.185.0**. That release pauses the same turn for approvals (`turn.update {status:"paused"}`) and adds new event types, so SDK 0.184.1 failed with `Expected "mcp.auth_required". Received "turn.update"`.
+  - Fix: SDK 0.185.0. Approvals are now posted to the paused turn with `createTurnEvents`, and the stream resumes with `subscribeToTurn(afterEventId)`. The old new-turn resume path is kept for older servers.
+  - Verified on 0.185: local mini (an edit plus a `run_commands` approval, 6 requests), and Task A+C on Gemini (dead endpoint → fallback, then a 56 s provider wait, then done). All six Task A values are correct and `test_helpers` has 35 passed.
+- **Nemotron Task B with `run_commands`** (`bench/results/1113-151015-*`): ❌ not completed.
+  - Counts: 37 requests, 0 compactions, 0 duplicate reads.
+  - `cli.py` was edited correctly. Then the model wrote a scratch `test_app.py` and spent **18 `run_commands` calls** probing it (`python -c …`, `flask --app test_app config`), despite the "verify once" rule.
+  - The daily cap ended the run before the test and docs were written. Flask was restored clean.
+- **Fix (generic):** a verification-loop brake. After **4 command calls in a row without an applied edit**, further `run_commands`/`run_command` calls are refused, with guidance to read the failure and edit, or to finish and report. The counter resets on the next applied edit. It is unit-tested but **not yet measured on Task B**, because the quota is used up for today.
+- Recommendation for the demo day: pin TrueForge (`npx @truefoundry/trueforge@0.185.0`) so that a new release cannot change the protocol mid-recording.
