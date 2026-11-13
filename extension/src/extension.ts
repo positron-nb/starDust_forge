@@ -64,7 +64,8 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   // ---- TrueForge runners (created lazily: the extension works before TrueForge starts) ----
   const makeRunner = async (extraInstructions = ''): Promise<AgentRunner> => {
     const name = cfg().get<string>('mcpServerName', 'forge-workspace');
-    const r = new AgentRunner({ baseUrl: baseUrl(), models: cfg().get<string[]>('models', []), spec: loadAgentSpec(name, extraInstructions, { profile: cfg().get<'full' | 'lean'>('profile', 'full'), compactAt: cfg().get<number>('compactAtTokens', 0), reasoningEffort: cfg().get<string>('reasoningEffort', '') || undefined }) });
+    const r = new AgentRunner({ baseUrl: baseUrl(), models: cfg().get<string[]>('models', []), spec: loadAgentSpec(name, extraInstructions, { profile: cfg().get<'full' | 'lean'>('profile', 'full'), compactAt: cfg().get<number>('compactAtTokens', 0), reasoningEffort: cfg().get<string>('reasoningEffort', '') || undefined }),
+      completionCheck: () => ledger.completionIssues(), handoff: () => ledger.handoff() });
     try { await mcp!.registerWithTrueForge(r.sdk, name); }
     catch (err) { throw new Error(`Cannot reach TrueForge at ${baseUrl()}. Start it with: npx @truefoundry/trueforge@latest  (${(err as Error).message})`); }
     return r;
@@ -123,7 +124,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
       return { message: r.message, mentions: r.mentions.map(m => ({ ref: m.ref, kind: m.kind, resolved: m.resolved, detail: m.detail })) };
     },
     onCancel: () => { killAllCommands(); review.cancelAll(); const n = changes.cancelAll(); if (n) log(`cancel: dropped ${n} approved-but-unapplied edit(s)`); },
-    onRunStart: (label, task) => { ledger.reset(task); return changes.beginRun(label); },
+    onRunStart: (label, task) => { ledger.reset(task, label === 'inline' ? 'inline' : 'agent'); return changes.beginRun(label); },
     appliedSummary: runId => {
       const files = runId ? [...new Set(changes.appliedInRun(runId).map(u => u.path))] : [];
       return files.length ? `Applied changes to ${files.length} file(s): ${files.join(', ')} (Forge: Undo Agent Run reverts them).` : '';

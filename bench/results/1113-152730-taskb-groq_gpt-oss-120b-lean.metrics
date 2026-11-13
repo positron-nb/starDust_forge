@@ -1,0 +1,3 @@
+{"model":"groq/gpt-oss-120b","session":"fgqspsmm","requests":2,"in_tok":11016,"out_tok":197,"max_in":7578,"cached":0,"tool_calls":2,"tool_errors":1,"model_errors":3,"compactions":0,"dup_reads":0,"secs":83,"tools":"get_context×1 search_workspace×1"}
+{"model":"google-gemini/gemini-3-1-flash-lite","session":"cjee8vd9","requests":38,"in_tok":1036889,"out_tok":3890,"max_in":38350,"cached":0,"tool_calls":37,"tool_errors":12,"model_errors":2,"compactions":0,"dup_reads":1,"secs":312,"tools":"get_context×1 read_file×8 search_workspace×1 list_tools×1 run_commands×11 task_state×1 propose_edit×14"}
+TOTAL requests=40 in=1047905 out=4087 cached=0 tool_calls=39 tool_errors=13 model_errors=5 compactions=0 dup_reads=1 secs=395

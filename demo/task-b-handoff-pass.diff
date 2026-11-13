@@ -1,0 +1,107 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..abdc85be 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -146,8 +146,25 @@ context will be active, and the app instance will be imported. ::
+ Use :meth:`~Flask.shell_context_processor` to add other automatic imports.
+ 
+ 
++
++Show Configuration
++------------------
++
++The :func:`config <cli.config_command>` command will print the loaded
++application's configuration as JSON. Values for keys containing "SECRET",
++"PASSWORD", "TOKEN", or "KEY" are masked as ``"***"``. ::
++
++    $ flask config
++    {
++      "DEBUG": true,
++      "SECRET_KEY": "***",
++      "DATABASE_URL": "postgresql://user:***@localhost/db"
++    }
++
++
+ .. _dotenv:
+ 
++
+ Environment Variables From dotenv
+ ---------------------------------
+ 
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..b9169836 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -590,10 +590,15 @@ class FlaskGroup(AppGroup):
+         self.load_dotenv = load_dotenv
+         self.set_debug_flag = set_debug_flag
+ 
++        if add_default_commands:
++            self.add_command(run_command)
++            self.add_command(shell_command)
+         if add_default_commands:
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
++
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1114,6 +1119,22 @@ def routes_command(sort: str, all_methods: bool) -> None:
+     for row in rows:
+         click.echo(template.format(*row))
+ 
++    for row in rows:
++        click.echo(template.format(*row))
++
++
++@click.command("config", short_help="Show the config for the app.")
++@with_appcontext
++def config_command() -> None:
++    """Show the config for the app as JSON."""
++    import json
++
++    mask_keys = {"SECRET", "PASSWORD", "TOKEN", "KEY"}
++    config = {
++        k: "***" if any(m in k.upper() for m in mask_keys) else v
++        for k, v in current_app.config.items()
++    }
++    click.echo(json.dumps(config, indent=2, sort_keys=True, default=repr))
+ 
+ cli = FlaskGroup(
+     name="flask",
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..c2b15468 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -700,3 +700,29 @@ def test_cli_empty(app):
+ def test_run_exclude_patterns():
+     ctx = run_command.make_context("run", ["--exclude-patterns", __file__])
+     assert ctx.params["exclude_patterns"] == [__file__]
++
++
++def test_config_command(runner):
++    def create_app():
++        app = Flask("testapp")
++        app.config["SECRET_KEY"] = "super-secret"
++        app.config["DATABASE_URL"] = "postgresql://user:password@localhost/db"
++        app.config["DEBUG"] = "true"
++        return app
++
++    cli = FlaskGroup(create_app=create_app)
++    result = runner.invoke(cli, ["config"])
++    assert result.exit_code == 0
++    import json
++    output = json.loads(result.output)
++
++    assert output["DATABASE_URL"] == "postgresql://user:password@localhost/db"
++    assert output["SECRET_KEY"] == "***"
++    # Flask's config might normalize DEBUG as boolean
++    assert output["DEBUG"] is False
++
++
++
++
++
++

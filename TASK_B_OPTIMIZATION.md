@@ -96,3 +96,16 @@ It checks that Flask is clean at `22d92470`, that 58 baseline tests pass, that T
   - The daily cap ended the run before the test and docs were written. Flask was restored clean.
 - **Fix (generic):** a verification-loop brake. After **4 command calls in a row without an applied edit**, further `run_commands`/`run_command` calls are refused, with guidance to read the failure and edit, or to finish and report. The counter resets on the next applied edit. It is unit-tested but **not yet measured on Task B**, because the quota is used up for today.
 - Recommendation for the demo day: pin TrueForge (`npx @truefoundry/trueforge@0.185.0`) so that a new release cannot change the protocol mid-recording.
+
+## 7. Plan-driven gates and fallback handoff (13 Nov, later)
+Three mechanism changes, all generic and all driven by the extension-held task ledger:
+1. **Structured plan + edits-before-verify gate.** `task_state` takes `planned_files` (every file the agent will change). After the first applied edit, command calls are refused while planned files are still unedited ("finish your planned edits first"). This targets the 13 Nov Nemotron failure, where one file was edited and the quota then went on probing.
+2. **Completion check.** When the agent ends its turn, the editor checks the ledger: every planned file has an applied edit, a test command ran after the last edit, and it passed. If not, the runner sends one automatic follow-up turn naming what is missing (max 2 per run). Inline edits are exempt.
+3. **Fallback handoff.** When a model fails and the next one starts a fresh TrueForge session, that session receives the original task plus the ledger (plan, files found, edits already on disk, test status), so work is not restarted from zero and quotas of different providers add up.
+
+**Verified run** (`bench/results/1113-152730-taskb-groq_gpt-oss-120b-lean.*`), chain Groq gpt-oss-120b → Gemini 3.1 Flash-Lite:
+- Groq made 2 tool calls, then failed on its per-minute token limit (429, 429, 413). The handoff text reached the Gemini session (confirmed in the stored `turn.created` input: task + "HANDOFF …" + ledger).
+- Flash-Lite, the weakest model we use, finished Task B: **3 files, `test_cli.py` 59 passed, full suite 490 passed + the 1 pre-existing failure, masked output correct, 0 lines removed from the test file.**
+- The existing-test guard refused 3 attempts to modify `test_no_command_echo_loading_error`; the model then inserted a new test instead.
+- 40 requests in total (38 on Gemini), 0 compactions, 11 command batches, 2 provider waits (34 s, 19 s) survived. The ledger ended with `planned=cli.py,test_cli.py,docs/cli.rst pending=none`.
+- Not yet measured with these gates: Nemotron (daily quota used up on 13 Nov).

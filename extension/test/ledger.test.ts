@@ -87,3 +87,44 @@ describe('verification-loop brake', () => {
     expect(l.commandBrake()).toBeUndefined();
   });
 });
+
+describe('plan-driven gates', () => {
+  const mk = () => { const l = new TaskLedger(); l.reset('task'); l.setPlannedFiles(['src/a.py', './tests/test_a.py', 'docs\\a.rst']); return l; };
+  it('refuses commands while planned files are unedited (after the first edit), then allows', () => {
+    const l = mk();
+    expect(l.commandBrake()).toBeUndefined();            // exploring before any edit is fine
+    l.recordEdit('src/a.py', 'impl');
+    expect(l.commandBrake()).toMatch(/finish your planned edits first.*tests\/test_a\.py, docs\/a\.rst/);
+    l.recordEdit('tests/test_a.py', 'test'); l.recordEdit('docs/a.rst', 'docs');
+    expect(l.pendingPlanned()).toEqual([]);
+    expect(l.commandBrake()).toBeUndefined();
+  });
+  it('completion check: pending files, tests not run, failing tests, then clean', () => {
+    const l = mk();
+    expect(l.completionIssues()).toBeUndefined();        // nothing edited: plain answer, no gate
+    l.recordEdit('src/a.py', 'impl');
+    expect(l.completionIssues()).toMatch(/no applied edit yet: tests\/test_a\.py, docs\/a\.rst.*no test command has run/);
+    l.recordEdit('tests/test_a.py', 't'); l.recordEdit('docs/a.rst', 'd');
+    l.recordCommand('python -m pytest tests/test_a.py -q', 1, '1 failed, 2 passed in 0.1s');
+    expect(l.completionIssues()).toMatch(/last test run failed/);
+    l.recordEdit('src/a.py', 'fix');
+    expect(l.completionIssues()).toMatch(/no test command has run since your last applied edit/);
+    l.recordCommand('python -m pytest tests/test_a.py -q', 0, '3 passed in 0.1s');
+    expect(l.completionIssues()).toBeUndefined();
+  });
+  it('inline mode has no gates', () => {
+    const l = new TaskLedger(); l.reset('t', 'inline'); l.recordEdit('a.py', 'x');
+    expect(l.completionIssues()).toBeUndefined();
+  });
+  it('handoff carries task, plan, applied edits and forgets read ranges', () => {
+    const l = mk();
+    expect(new TaskLedger().handoff()).toBeUndefined();
+    l.plan = 'add feature'; l.recordRead('src/a.py', 'x\n', 1, 1); l.recordEdit('src/a.py', 'impl');
+    const h = l.handoff()!;
+    expect(h).toMatch(/^HANDOFF/);
+    expect(h).toContain('ORIGINAL TASK:\ntask');
+    expect(h).toContain('src/a.py (edited ✓)');
+    expect(h).toContain('tests/test_a.py (PENDING)');
+    expect(l.reads.size).toBe(0);
+  });
+});

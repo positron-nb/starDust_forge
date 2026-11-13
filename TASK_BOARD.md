@@ -34,3 +34,5 @@
 | H1 | Team details in write-up | PENDING (user) |
 | H2 | UI checklist (13 checks) | PENDING (user), docs/UI_CHECKLIST.md |
 | H3 | 4-min video + scorecard timestamps | PENDING (user), docs/DEMO_SCRIPT.md |
+| F11 | TrueForge 0.185 approval protocol (paused turn, createTurnEvents, subscribeToTurn) | VERIFIED (mini, Task A+C, Task B) |
+| F12 | Plan gates (planned_files, edits-before-verify), completion check, fallback handoff | VERIFIED 13 Nov: Groq→Gemini Flash-Lite Task B pass (59 tests, 40 requests). Nemotron with gates: pending quota |

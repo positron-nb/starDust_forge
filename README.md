@@ -13,7 +13,7 @@ Built for the IIT Bombay Techfest 2026 TrueFoundry Forge-a-thon.
 | Context assembly (@file/@symbol, BM25 + import graph, token budget, reasons) | `src/context/*`, MCP tool `get_context` |
 | Diff review (hunks, apply accepted only, undo per change / per run) | `src/changes/*`, `ui/review.ts` |
 | Streaming + cancellation (no half-applied edits) | `trueforge/agentRunner.ts`, `changes/changeManager.ts` |
-| Resilience (retry honouring provider hints, automatic model fallback) | `trueforge/agentRunner.ts` |
+| Resilience (retry honouring provider hints, automatic model fallback with task-state handoff, completion check) | `trueforge/agentRunner.ts`, `agent/ledger.ts` |
 | Agent definition | [`agent/forge-coder.json`](agent/forge-coder.json) |
 
 Design details: [ARCHITECTURE.md](ARCHITECTURE.md) · research notes: [TECHNICAL_RESEARCH.md](TECHNICAL_RESEARCH.md).

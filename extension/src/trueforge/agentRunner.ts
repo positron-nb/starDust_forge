@@ -50,6 +50,7 @@ export interface RunResult {
 const TRANSIENT = /(429|rate.?limit|overloaded|503|502|timeout|ECONNRESET|temporar)/i;
 const MAX_RETRIES_PER_MODEL = 2;
 const MAX_HINTED_RETRIES = 8;
+const MAX_COMPLETION_NUDGES = 2;
 
 export class AgentRunner {
   private client: TrueForge;
@@ -58,7 +59,13 @@ export class AgentRunner {
   private abort?: AbortController;
   private cancelled = false;
 
-  constructor(private readonly opts: { baseUrl: string; models: string[]; spec: AgentSpec; sleep?: (ms: number) => Promise<void> }) {
+  constructor(private readonly opts: {
+    baseUrl: string; models: string[]; spec: AgentSpec; sleep?: (ms: number) => Promise<void>;
+    /** Called when the agent ends its turn; a returned string is sent as one automatic follow-up turn (max 2 per run). */
+    completionCheck?: () => string | undefined;
+    /** Called when falling back to the next model; a returned string (task state so far) is given to the fresh session. */
+    handoff?: () => string | undefined;
+  }) {
     if (opts.models.length === 0) throw new Error('forge.models is empty: configure at least one model FQN.');
     this.client = new TrueForge({ baseUrl: opts.baseUrl, timeoutInSeconds: 900 });
   }
@@ -82,6 +89,8 @@ export class AgentRunner {
   async run(userMessage: string, hooks: RunHooks = {}): Promise<RunResult> {
     this.cancelled = false;
     const firstInput: Input = [{ type: 'user.message', content: userMessage }];
+    let handoffText: string | undefined;
+    let nudges = 0;
 
     for (; this.modelIndex < this.opts.models.length; this.modelIndex++) {
       const model = this.currentModel;
@@ -97,12 +106,22 @@ export class AgentRunner {
             });
             this.sessionId = data.id;
             hooks.onSession?.({ sessionId: data.id, model });
+            // A fallback model continues from the recorded task state instead of starting from zero.
+            if (handoffText) input = [{ type: 'user.message', content: [userMessage, handoffText].join('\n\n') }];
           } else if (attempt > 0) {
             // Same session after a transient error: the request and any tool results are already in
             // the session history, so ask the agent to continue instead of repeating the request.
             input = [{ type: 'user.message', content: 'The previous attempt was interrupted by a transient model/provider error. Continue the task from where you left off; do not redo completed steps.' }];
           }
           result = await this.driveTurns(input, hooks);
+          // Completion check: "done" is only accepted when the editor-side task state agrees.
+          while (result.status === 'done' && nudges < MAX_COMPLETION_NUDGES && !this.cancelled) {
+            const issue = this.opts.completionCheck?.();
+            if (!issue) break;
+            nudges++;
+            hooks.onStatus?.(`Completion check ${nudges}/${MAX_COMPLETION_NUDGES}: ${issue.split('. ')[0].replace(/^Completion check by the editor — /, '')}. Asking the agent to finish.`, 'info');
+            result = await this.driveTurns([{ type: 'user.message', content: issue }], hooks);
+          }
         } catch (err) {
           if (this.cancelled) return { status: 'cancelled', model };
           result = { status: 'error', error: describe(err) };
@@ -124,6 +143,10 @@ export class AgentRunner {
           ? `${model} failed: ${summarizeError(msg)} Falling back to ${next} automatically.`
           : `${model} failed: ${summarizeError(msg)} No more fallback models configured.`, next ? 'warn' : 'error');
         this.sessionId = undefined; // a fallback model gets a fresh TrueForge session
+        if (next) {
+          handoffText = this.opts.handoff?.();
+          if (handoffText) hooks.onStatus?.(`Handing the task state (plan, applied edits, test status) over to ${next}.`, 'info');
+        }
         if (!next) return { status: 'error', error: summarizeError(msg), model };
         break;
       }
