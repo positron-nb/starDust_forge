@@ -1,0 +1,15 @@
+[config] profile=lean compactAt=100000 reasoning=none
+[session] http://localhost:8790/sessions/01m7qdj9y2b9chrb24dmetkp4y (probe/ornith)
+  [tool] get_context {"query":"discount cart total negative","budget_tokens":10000}
+  [context] 190/10000 tok → tests/test_cart.py, shop/cart.py, shop/pricing.py
+  [review] shop/pricing.py: 1 hunk(s) → accept all
+  [tool] propose_edit {"path":"shop/pricing.py","edits":1}
+  [approve cmd] {"commands":[{"argv":["python","-m","pytest","tests/test_cart.py","-q"],"timeout":30}]}
+  [tool] run_commands {"commands":["python -m pytest tests/test_cart.py -q"],"fail_fast":false}
+
+RESULT done on probe/ornith in 56s; files written: shop/pricing.py
+Both tests pass.
+
+**Fix:** `shop/pricing.py` line 3 — changed `price - price * percent` to `price * (1 - percent / 100)`. The original formula treated `percent` as a multiplier (so 10% became 10×), producing `100 - 100*10 = -900`. The corrected formula properly divides by 100, giving `100 * 0.9 = 90`.
+[ledger] reads=0 duplicate_reads=0 edits=1 refused=0 last_test=2 passed in 0.04s planned=none pending=none
+exit=0

@@ -26,13 +26,13 @@ Requirements: Node ≥ 22.14, VS Code ≥ 1.95, Git. Python 3.10+ only for the F
 The extension's MCP server listens on `127.0.0.1`; TrueForge's outbound SSRF guard blocks loopback unless it is allow-listed:
 
 ```bash
-OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx @truefoundry/trueforge@0.185.0
+OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx @truefoundry/trueforge@latest
 ```
 PowerShell:
 ```powershell
-$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@0.185.0
+$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@latest
 ```
-TrueForge UI/API: <http://localhost:8790>. Tested with TrueForge **0.185.0** and SDK `0.185.0` (pin the version: 0.185 changed the approval protocol). Older servers that end the turn for approval are still supported.
+TrueForge UI/API: <http://localhost:8790>. Verified with TrueForge **0.185.0 and 0.185.1** (`@latest` on 18 Nov 2026) and SDK `0.185.0`. If a later release changes the protocol, pin the tested one: `npx @truefoundry/trueforge@0.185.1`. (0.185 moved approvals onto the paused turn; the extension supports both the old and the new protocol.)
 
 ### 2. Configure models and load the agent definition
 Either add a provider in the TrueForge UI (**Settings → Models**), or:
@@ -57,7 +57,7 @@ Then set `forge.models` to `["local-ollama/qwen3-forge", "google-gemini/gemini-3
 cd extension
 npm ci
 npm run build
-npm test                # 65 unit tests
+npm test                # 70 unit tests
 npm run test:ui         # 10 integration tests inside a real VS Code (diff review, apply, undo, cancel, guards)
 code --extensionDevelopmentPath="$PWD" /path/to/your/repo
 ```
@@ -73,9 +73,9 @@ Open the **Forge Agent** view in the activity bar. Settings:
 | Setting | Default | Meaning |
 |---|---|---|
 | `forge.baseUrl` | `http://localhost:8790` | TrueForge server |
-| `forge.models` | `["google-gemini/gemini-3-5-flash", "google-gemini/gemini-3-1-flash-lite"]` | Model FQNs **in fallback order**. Switching model = editing this list. |
+| `forge.models` | `[]` | Model names (`provider/model`) **in fallback order**. Empty = use the models configured in TrueForge (up to 3). Switching model = editing this list. |
 | `forge.autoApproveCommands` | pytest / `flask --help` / `git status` | Regexes of commands run without a confirmation prompt |
-| `forge.profile` | `full` | `full`: deferred tool loading, sub-agents, ask-user (shows TrueForge features). `lean`: frequently used tools preloaded (get_context, read_file(s), search_workspace, propose_edit, run_commands, task_state); `find_symbol`, `list_files` and `run_command` stay **deferred** (TrueForge `list_tools`/`get_tool_info`/`call_tool`); no sub-agents or ask-user. Recommended for free/small models. |
+| `forge.profile` | `full` | `full`: deferred tool loading, sub-agents, ask-user (shows TrueForge features). `lean`: tools used throughout a task preloaded (get_context, read_file(s), search_workspace, propose_edit, task_state); the verification tools `run_commands`/`run_command` plus `find_symbol` and `list_files` stay **deferred** (TrueForge `list_tools`/`get_tool_info`/`call_tool`); no sub-agents or ask-user. Recommended for free/small models. |
 | `forge.compactAtTokens` | `0` | TrueForge compaction trigger: `>0` explicit `input_tokens` trigger, `-1` disables compaction, `0` = TrueForge default (80% of context) |
 | `forge.reasoningEffort` | `""` | Sent as TrueForge `model.params.reasoning_effort`; `none` turns thinking off on local Ollama models |
 

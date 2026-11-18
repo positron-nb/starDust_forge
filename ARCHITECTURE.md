@@ -9,7 +9,7 @@
 │        │ HTTP/SSE (@truefoundry/trueforge-sdk)                                      │
 │ MCP server (Streamable HTTP, 127.0.0.1:random port, bearer token)                   │
 │   get_context · read_file · read_files · search_workspace · propose_edit ·          │
-│   run_commands · task_state      (deferred: find_symbol · list_files · run_command) │
+│   task_state   (deferred: run_commands · run_command · find_symbol · list_files)    │
 │        │                                                                            │
 │ Context engine     symbol index · BM25 · import graph · budget packer · reasons     │
 │ Change manager     proposals · hunks · apply accepted only · undo · cancel=discard  │
@@ -37,6 +37,12 @@
 3. The user accepts or rejects each hunk (CodeLens, Alt+Y / Alt+N, or the panel card) and applies the decisions.
 4. The extension posts `user.tool_approval` to the paused turn (`createTurnEvents`) and resumes the stream (`subscribeToTurn`, `afterEventId`). Servers older than 0.185 ended the turn instead; that path is still supported.
 5. TrueForge executes `propose_edit`. The handler writes only the accepted hunks as one undoable `WorkspaceEdit` and tells the agent what was applied or rejected.
+
+## Deferred tool loading (TrueForge context engineering)
+`preload: false` with `preload_tools` for the tools used throughout a task. The verification tools (`run_commands`, `run_command`) and the rarely needed `find_symbol`/`list_files` stay deferred: their schemas are not resent with every exploration and edit request, and the agent reaches them at the end of the task through TrueForge's `list_tools` → `get_tool_info` → `call_tool` (visible in the session). Approvals see through `call_tool`, so a deferred command still needs the user's OK. Earlier measurement: deferring always-needed tools cost 32% of calls, so only end-of-task and rare tools are deferred.
+
+## Loop detector
+If the model makes the same failing tool call (same tool, same arguments) 3 times in a row, the runner stops the turn and sends a corrective message (max 2 per run), instead of letting it burn requests. Seen before the fix: a small local model repeated one invalid `call_tool` 90 times.
 
 ## Edit guards (before any diff is shown)
 An edit is refused, with a reason the agent can act on, if it:
@@ -66,6 +72,6 @@ Explicit context: `@file:path` and `@symbol:name` are resolved locally into a pi
 Embeddings were not used: they need a second provider, add indexing latency, and lexical plus structural retrieval already finds the files the fixed tasks need.
 
 ## Testing
-- `npm test`: 65 unit tests (vitest).
+- `npm test`: 70 unit tests (vitest).
 - `npm run test:ui`: 10 integration tests inside a real VS Code extension host (diff editor, hunk commands, apply, undo, cancel, stale file, guards).
 - `bench/run.sh`: the real TrueForge pipeline headless, with provider-reported usage, test results and diffs saved under `bench/results/`.

@@ -1,0 +1,2 @@
+{"model":"probe/ornith","session":"tbw7hn9e","requests":82,"in_tok":699641,"out_tok":4623,"max_in":13035,"cached":0,"tool_calls":82,"tool_errors":80,"model_errors":1,"compactions":0,"dup_reads":0,"secs":410,"tools":"get_context×1 propose_edit×1 call_tool×80"}
+TOTAL requests=82 in=699641 out=4623 cached=0 tool_calls=82 tool_errors=80 model_errors=1 compactions=0 dup_reads=0 secs=410

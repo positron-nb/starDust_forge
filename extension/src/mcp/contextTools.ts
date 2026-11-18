@@ -40,7 +40,7 @@ export function installContextTools(server: McpServer, d: ContextToolDeps): void
   server.registerTool('find_symbol', {
     title: 'Find symbol',
     description: 'Find where a function, class, method or doc section is defined (exact name, then substring). Returns file, line range, signature and docstring.',
-    inputSchema: { name: z.string().describe('Symbol name, e.g. "get_debug_flag" or "FlaskGroup.list_commands"') },
+    inputSchema: { name: z.string().describe('Symbol name, e.g. "parse_args" or "MyClass.method"') },
     annotations: RO,
   }, async ({ name }) => {
     d.onToolCall?.('find_symbol', { name });

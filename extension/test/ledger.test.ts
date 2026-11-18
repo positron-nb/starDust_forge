@@ -72,7 +72,7 @@ describe('lean profile keeps rarely used tools deferred', () => {
     const srv = s.mcpServers[0] as Record<string, unknown>;
     expect(srv.preload).toBe(false);
     expect(srv.preloadTools).not.toContain('find_symbol');
-    expect(srv.preloadTools).toContain('run_commands');
+    expect(srv.preloadTools).not.toContain('run_commands');
     expect(srv.preloadTools).not.toContain('run_command');
   });
 });

@@ -40,7 +40,8 @@ export interface RunHooks {
 }
 
 export interface RunResult {
-  status: 'done' | 'cancelled' | 'error';
+  /** 'stuck' is internal: the runner recovers from it with a corrective turn. */
+  status: 'done' | 'cancelled' | 'error' | 'stuck';
   output?: string;
   model?: string;
   sessionId?: string;
@@ -51,6 +52,7 @@ const TRANSIENT = /(429|rate.?limit|overloaded|503|502|timeout|ECONNRESET|tempor
 const MAX_RETRIES_PER_MODEL = 2;
 const MAX_HINTED_RETRIES = 8;
 const MAX_COMPLETION_NUDGES = 2;
+const MAX_LOOP_RECOVERIES = 2;
 
 export class AgentRunner {
   private client: TrueForge;
@@ -91,6 +93,7 @@ export class AgentRunner {
     const firstInput: Input = [{ type: 'user.message', content: userMessage }];
     let handoffText: string | undefined;
     let nudges = 0;
+    let loops = 0;
 
     for (; this.modelIndex < this.opts.models.length; this.modelIndex++) {
       const model = this.currentModel;
@@ -114,8 +117,18 @@ export class AgentRunner {
             input = [{ type: 'user.message', content: 'The previous attempt was interrupted by a transient model/provider error. Continue the task from where you left off; do not redo completed steps.' }];
           }
           result = await this.driveTurns(input, hooks);
-          // Completion check: "done" is only accepted when the editor-side task state agrees.
-          while (result.status === 'done' && nudges < MAX_COMPLETION_NUDGES && !this.cancelled) {
+          for (;;) {
+            if (this.cancelled) break;
+            // Loop brake: the same tool call failed repeatedly; stop and redirect the model.
+            if (result.status === 'stuck') {
+              if (loops >= MAX_LOOP_RECOVERIES) { result = { status: 'error', error: `The model kept repeating a failing tool call. ${result.error ?? ''}` }; break; }
+              loops++;
+              hooks.onStatus?.(`Stopped a loop (${loops}/${MAX_LOOP_RECOVERIES}): the model repeated the same failing tool call. Asking it to change approach.`, 'warn');
+              result = await this.driveTurns([{ type: 'user.message', content: result.error ?? '' }], hooks);
+              continue;
+            }
+            // Completion check: "done" is only accepted when the editor-side task state agrees.
+            if (result.status !== 'done' || nudges >= MAX_COMPLETION_NUDGES) break;
             const issue = this.opts.completionCheck?.();
             if (!issue) break;
             nudges++;
@@ -168,6 +181,7 @@ export class AgentRunner {
     let lastId: string | undefined;
     this.abort = new AbortController();
     const opts = { abortSignal: this.abort.signal, timeoutInSeconds: 900 };
+    const stuck = new LoopDetector();
     let stream = await this.client.sessions.createTurnStream(sid, { input }, opts);
     for (;;) {
       const approvals: TrueForgeApi.ToolApprovalRequiredEvent[] = [];
@@ -185,6 +199,25 @@ export class AgentRunner {
         lastId = e.id;
         hooks.onEvent?.(e);
         if (e.type === 'turn.created') turnId = (e as TrueForgeApi.TurnCreatedEvent).turnId;
+        if (e.type === 'tool.response') {
+          const r = e as { toolCallId: string; content: unknown };
+          // Tool calls arrive through streamed deltas merged into the model.message, so look the
+          // call up in the merged events when its response arrives.
+          for (const m of events.values()) {
+            if (m.type !== 'model.message') continue;
+            const tc = (m as TrueForgeApi.ModelMessageEvent).toolCalls?.find(c => c.id === r.toolCallId);
+            if (tc) { stuck.call(tc.id, tc.function.name, tc.function.arguments ?? ''); break; }
+          }
+          const loop = stuck.result(r.toolCallId, typeof r.content === 'string' ? r.content : JSON.stringify(r.content));
+          if (loop) {
+            // The model repeats the same failing call: stop this turn and tell it, instead of
+            // letting it burn requests (seen: 80 identical failing calls from a small model).
+            this.abort?.abort();
+            try { await this.client.sessions.cancel(sid); } catch { /* already stopped */ }
+            this.abort = new AbortController();
+            return { status: 'stuck', error: loop };
+          }
+        }
         if (e.type === 'tool.approval_required') approvals.push(e);
         if (e.type === 'turn.update' && (e as { state?: { status?: string } }).state?.status === 'paused') { paused = true; break; }
         if (e.type === 'turn.done') { done = e; break; }
@@ -270,3 +303,27 @@ function describe(err: unknown): string {
   return e?.message ?? String(err);
 }
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+/**
+ * Detects a model repeating the same failing tool call (same tool, same arguments).
+ * Returns a corrective message after `limit` consecutive identical failures.
+ */
+export class LoopDetector {
+  private sig = new Map<string, string>();
+  private lastFail?: string;
+  private count = 0;
+  constructor(private readonly limit = 3) {}
+  call(id: string, name: string, args: string): void { this.sig.set(id, `${name} ${args}`); }
+  result(id: string, content: string): string | undefined {
+    const s = this.sig.get(id);
+    if (!s) return undefined;
+    const failed = /^\s*\{?\s*"?error"?\s*[:=]|^Error:|Refused:|not found in tool mapping|Validation failed|is not allowed/i.test(content.slice(0, 300));
+    if (!failed) { this.lastFail = undefined; this.count = 0; return undefined; }
+    this.count = s === this.lastFail ? this.count + 1 : 1;
+    this.lastFail = s;
+    if (this.count < this.limit) return undefined;
+    this.count = 0;
+    return `Loop detected by the editor: you made the same failing call ${this.limit} times in a row: ${s.slice(0, 300)}. Last error: ${content.slice(0, 300)}. ` +
+      'Do not repeat it. Read the error, then use a different tool or different arguments (list_tools and get_tool_info are called directly, not through call_tool), or finish and explain what is blocked.';
+  }
+}

@@ -128,11 +128,8 @@
           "items": {
             "type": "string"
           },
-          "default": [
-            "google-gemini/gemini-3-5-flash",
-            "google-gemini/gemini-3-1-flash-lite"
-          ],
-          "description": "Model FQNs configured in TrueForge, in fallback order. The first is primary; on a model error the next one takes over automatically."
+          "default": [],
+          "markdownDescription": "TrueForge model names (`provider/model`) in **fallback order**: the first is primary; on a model error the next takes over automatically. **Leave empty** to use the models configured in TrueForge itself (up to 3, in TrueForge's order)."
         },
         "forge.mcpServerName": {
           "type": "string",

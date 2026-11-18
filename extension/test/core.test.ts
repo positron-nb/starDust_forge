@@ -73,3 +73,17 @@ describe('default auto-approve command patterns (package.json)', () => {
     for (const c of ['rm -rf x', 'git push', 'git checkout -- .', 'pytestx', 'python -c "print(1)"', 'pip install x']) expect(ok(c), c).toBe(false);
   });
 });
+
+describe('loop detector', () => {
+  it('fires after 3 identical failing calls, not for different calls or successes', async () => {
+    const { LoopDetector } = await import('../src/trueforge/agentRunner');
+    const d = new LoopDetector(3);
+    const err = '{"error":[{"type":"text","text":"Tool \'list_tools\' is not allowed on MCP server forge-workspace"}]}';
+    d.call('a', 'call_tool', '{"tool_name":"list_tools"}'); expect(d.result('a', err)).toBeUndefined();
+    d.call('b', 'call_tool', '{"tool_name":"list_tools"}'); expect(d.result('b', err)).toBeUndefined();
+    d.call('c', 'call_tool', '{"tool_name":"list_tools"}'); expect(d.result('c', err)).toMatch(/Loop detected.*3 times/);
+    d.call('d', 'read_file', '{"path":"a"}'); expect(d.result('d', 'a.py lines 1-3 of 3')).toBeUndefined();
+    d.call('e', 'call_tool', '{"x":1}'); expect(d.result('e', err)).toBeUndefined();
+    d.call('f', 'call_tool', '{"x":2}'); expect(d.result('f', err)).toBeUndefined();
+  });
+});

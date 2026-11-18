@@ -2,7 +2,7 @@
 
 ## Before recording (checklist)
 1. **TrueForge running** (PowerShell, from the repo root):
-   `$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@0.185.0`
+   `$env:OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'; npx @truefoundry/trueforge@0.185.1`
    Leave this window open.
 2. **Flask clean:** `git -C flask status --short` prints nothing, and `git -C flask rev-parse --short=8 HEAD` prints `22d92470`.
 3. **Quota:** record after 05:30 IST, because OpenRouter's 50 requests/day reset at 00:00 UTC. Task B needs about 50 requests, so **do not run any other test on OpenRouter that day**. Task A uses Gemini.
@@ -23,7 +23,7 @@
 | **Task B** 0:50–2:40 | Switch `forge.models` back to Nemotron first. Panel: paste the Task B instruction (no file names) | "Agent mode" |
 | | `📚 Context selected` table: cli.py, test_cli.py, docs/cli.rst + reasons, budget bar | "Retrieval with budget, explained" |
 | | Review cards per file; **reject one hunk** deliberately, accept the rest (the agent re-proposes) | "Per-hunk review" |
-| | Click "TrueForge session ↗": turns, tool calls and the `task_state` plan in the TrueForge UI | required by the rules |
+| | Click "TrueForge session ↗": scroll to the end and show the turns, the tool calls, the `task_state` plan and the **deferred tool discovery** (`list_tools` → `get_tool_info` → `call_tool` for `run_commands`) | required by the rules; B4 evidence |
 | | `.venv/Scripts/python -m pytest tests/test_cli.py -q` → 61 passed; `flask --app ../demo/task_b_app.py config` shows `***` | verification |
 | | Forge: Undo Agent Run → `git status` clean (optional; reapply with Ctrl+Z only if time allows) | "Undo" |
 | **Cancel** 2:40–3:00 | Start any run, press Cancel (Ctrl+Alt+C or the panel's ■ button) mid-stream → `git status` clean | "Cancellation is safe" |

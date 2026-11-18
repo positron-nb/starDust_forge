@@ -33,10 +33,12 @@ export function loadAgentSpec(mcpServerName: string, extraInstructions = '', opt
   const config = m.config;
   let mcpServers = m.mcpServers.map(s => ({ ...s, name: mcpServerName }));
   if (opts.profile === 'lean') {
-    // Frequently used tools are preloaded (preload_tools); rarely needed ones (find_symbol,
-    // list_files, the single-command run_command) stay deferred and are reached through TrueForge's
-    // list_tools/get_tool_info/call_tool. Verification goes through the preloaded run_commands batch.
-    mcpServers = mcpServers.map(s => ({ ...s, preloadTools: (((s as Record<string, unknown>).preloadTools as string[] | undefined) ?? []).filter(t => t !== 'run_command') }));
+    // TrueForge deferred tool loading: tools used throughout the task are preloaded; tools needed
+    // only at the end (verification: run_commands, run_command) or rarely (find_symbol, list_files)
+    // stay deferred, so their schemas are not sent with every exploration/edit request. The agent
+    // reaches them through TrueForge's list_tools → get_tool_info → call_tool (visible in the session).
+    const DEFERRED_IN_LEAN = new Set(['run_command', 'run_commands', 'find_symbol', 'list_files']);
+    mcpServers = mcpServers.map(s => ({ ...s, preloadTools: (((s as Record<string, unknown>).preloadTools as string[] | undefined) ?? []).filter(t => !DEFERRED_IN_LEAN.has(t)) }));
     config.askUserQuestions = { enabled: false };
     config.dynamicSubAgents = { enabled: false };
   }

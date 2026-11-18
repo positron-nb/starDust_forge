@@ -16,6 +16,8 @@ import type { EditSpec } from './changes/hunks';
 import { prepareProposal } from './changes/prepare';
 import { AgentRunner, type ApprovalDecision, type ApprovalRequest } from './trueforge/agentRunner';
 import { loadAgentSpec } from './trueforge/agentSpec';
+import { resolveModels, type ProviderListing } from './trueforge/models';
+import { TrueForge } from '@truefoundry/trueforge-sdk';
 import { AgentViewProvider } from './ui/agentView';
 import { ReviewController, vscodeIO } from './ui/review';
 import { registerInlineEdit } from './ui/inlineEdit';
@@ -76,10 +78,19 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeTestA
   // ---- TrueForge runners (created lazily: the extension works before TrueForge starts) ----
   const makeRunner = async (extraInstructions = ''): Promise<AgentRunner> => {
     const name = cfg().get<string>('mcpServerName', 'forge-workspace');
-    const r = new AgentRunner({ baseUrl: baseUrl(), models: cfg().get<string[]>('models', []), spec: loadAgentSpec(name, extraInstructions, { profile: cfg().get<'full' | 'lean'>('profile', 'full'), compactAt: cfg().get<number>('compactAtTokens', 0), reasoningEffort: cfg().get<string>('reasoningEffort', '') || undefined }),
+    const unreachable = (err: unknown) => new Error(`Cannot reach TrueForge at ${baseUrl()}. Start it with OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx @truefoundry/trueforge@latest (see README). Details: ${(err as Error).message}`);
+    let providers: ProviderListing[] = [];
+    try {
+      const { data } = await new TrueForge({ baseUrl: baseUrl(), timeoutInSeconds: 15 }).settings.modelProviders.list();
+      providers = (data as Array<{ name: string; manifest?: { models?: Array<{ name: string }> } }>).map(p => ({ name: p.name, models: p.manifest?.models ?? [] }));
+    } catch (err) { throw unreachable(err); }
+    const { models, note } = resolveModels(cfg().get<string[]>('models', []), providers);
+    if (note) { log(note); view?.post({ kind: 'status', text: note, level: models.length ? 'info' : 'error' }); }
+    if (!models.length) throw new Error('No model is configured in TrueForge. Add one in TrueForge → Settings → Models, or set forge.models.');
+    const r = new AgentRunner({ baseUrl: baseUrl(), models, spec: loadAgentSpec(name, extraInstructions, { profile: cfg().get<'full' | 'lean'>('profile', 'full'), compactAt: cfg().get<number>('compactAtTokens', 0), reasoningEffort: cfg().get<string>('reasoningEffort', '') || undefined }),
       completionCheck: () => ledger.completionIssues(), handoff: () => ledger.handoff() });
     try { await mcp!.registerWithTrueForge(r.sdk, name); }
-    catch (err) { throw new Error(`Cannot reach TrueForge at ${baseUrl()}. Start it with OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]' npx @truefoundry/trueforge@0.185.0 (see README). Details: ${(err as Error).message}`); }
+    catch (err) { throw unreachable(err); }
     return r;
   };
   let runner: AgentRunner | undefined;

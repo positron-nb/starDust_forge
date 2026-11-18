@@ -1,0 +1,2 @@
+{"model":"probe/ornith","session":"dmetkp4y","requests":4,"in_tok":17328,"out_tok":383,"max_in":4678,"cached":0,"tool_calls":3,"tool_errors":0,"model_errors":0,"compactions":0,"dup_reads":0,"secs":56,"tools":"get_context×1 propose_edit×1 run_commands×1"}
+TOTAL requests=4 in=17328 out=383 cached=0 tool_calls=3 tool_errors=0 model_errors=0 compactions=0 dup_reads=0 secs=56

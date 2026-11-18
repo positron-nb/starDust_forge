@@ -4,7 +4,7 @@
 |---|---|---|---|
 | R1 | TrueForge blocks loopback MCP servers (SSRF guard) | Handled | Start with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1","localhost"]'` |
 | R2 | TrueForge has no native model fallback | Handled | Client-side fallback chain with task-state handoff |
-| R3 | TrueForge releases change the protocol (0.185 changed approvals) | Handled, still a risk | Version pinned to 0.185.0 in all docs; both approval protocols supported |
+| R3 | TrueForge releases change the protocol (0.185 changed approvals) | Handled, still a risk | Verified on 0.185.0 and 0.185.1 (`@latest` on 18 Nov); README gives the pin to fall back to; both approval protocols supported; demo pinned to 0.185.1 |
 | R4 | Free-tier limits: OpenRouter 50 requests/day, Gemini 429/503 spikes | **Open** | Chain Nemotron → Gemini Flash → Flash-Lite; provider wait hints honoured; record after the 05:30 IST reset and run nothing else on OpenRouter that day |
 | R5 | Free models vary run to run on Task B (pass, or cut off by quota) | **Open** | Plan gates, loop brake, completion check and handoff reduce it; allow 1–2 attempts for the video |
 | R6 | Weak models damage code (delete definitions, rewrite tests, invalid syntax) | Handled | Guards refuse these edits before review; verified in real runs |
