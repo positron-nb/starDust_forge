@@ -109,3 +109,19 @@ Three mechanism changes, all generic and all driven by the extension-held task l
 - The existing-test guard refused 3 attempts to modify `test_no_command_echo_loading_error`; the model then inserted a new test instead.
 - 40 requests in total (38 on Gemini), 0 compactions, 11 command batches, 2 provider waits (34 s, 19 s) survived. The ledger ended with `planned=cli.py,test_cli.py,docs/cli.rst pending=none`.
 - Not yet measured with these gates: Nemotron (daily quota used up on 13 Nov).
+
+## 8. Final design on Nemotron, TrueForge 0.185.1 (18 Nov)
+Run `bench/results/1118-194009-taskb-openrouter_nemotron-ultra-lean.*`, with lean profile, deferred verification tools, plan gates, loop detector and compaction trigger 100000.
+- **The laptop shut down during the agent's final extra checks**, so the harness never printed RESULT and never restored Flask. The edits left in Flask were verified by hand and then restored:
+  - 3 files (`cli.py`, `test_cli.py`, `docs/cli.rst`), additions only (+74 lines);
+  - `test_cli.py` **59 passed**;
+  - `flask --help` lists `config`, and `flask config` masks `SECRET_KEY`, `DATABASE_PASSWORD` and `API_TOKEN`;
+  - `git diff --check` is clean.
+- **TrueForge session counts:** **43 requests** (previous Nemotron pass: 54), 1.36M input tokens, largest request 42.8k, **0 compactions, 0 duplicate reads**, 10 failed tool calls.
+- **Deferred tool loading in the session:** `run_commands` was reached through TrueForge's `call_tool` 11 times. Because the instructions show the exact call, the model skipped `list_tools`/`get_tool_info`.
+- **Timeline:**
+  - #13: plan saved with `planned_files`.
+  - By about #28: all three files edited.
+  - #39: `test_cli.py` passes.
+  - #40: `flask --help` checked.
+  - #41–43: extra `python -c` probes, when the machine went down.

@@ -21,7 +21,6 @@
 - Inline edit input box, streaming in the panel, context table and budget bar, TrueForge session link, and fallback messages **as seen on screen** (`docs/UI_CHECKLIST.md`).
 - The video and its scorecard timestamps (`docs/DEMO_SCRIPT.md`).
 - Team details in `docs/WRITEUP.md`.
-- Nemotron Task B with the plan gates and handoff (OpenRouter quota was used up on 13 Nov).
 
 ## Commands
 ```bash

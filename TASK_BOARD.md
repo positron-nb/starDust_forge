@@ -42,6 +42,7 @@
 | F16 | ARCHITECTURE / HANDOFF / RISKS rewritten to current state | DONE |
 | F17 | Works on TrueForge @latest (0.185.1, 18 Nov): mini + Task A/C with a local 9B model | VERIFIED |
 | F18 | Empty forge.models → models configured in TrueForge (works with the organisers' model without settings) | TESTED (unit + live provider listing) |
-| F19 | Verification tools deferred in lean (visible list_tools/get_tool_info/call_tool) for B4 | VERIFIED on local mini runs; Task B session pending video |
+| F19 | Verification tools deferred in lean (visible list_tools/get_tool_info/call_tool) for B4 | VERIFIED: local mini runs, and the 18 Nov Nemotron Task B session (`call_tool` → `run_commands` ×11) |
 | F20 | Loop detector (same failing call 3x → stop + redirect) | TESTED (unit); fixed to read tool calls from merged stream events |
 | F21 | Write-up: exact heading 8, C2 row, every model declared, tools incl. all Claude models + ChatGPT | DONE |
+| P7b-final | Task B, final design on Nemotron + TrueForge 0.185.1 | VERIFIED 18 Nov: 3 files, 59 passed, 43 requests, 0 compactions (run cut by a laptop shutdown during extra checks; edits verified by hand) |

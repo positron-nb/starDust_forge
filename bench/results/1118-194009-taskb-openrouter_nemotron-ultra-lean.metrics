@@ -1,0 +1,2 @@
+{"model":"openrouter/nemotron-ultra","session":"dvmg8htq","requests":43,"in_tok":1359515,"out_tok":6870,"max_in":42808,"cached":0,"tool_calls":43,"tool_errors":10,"model_errors":0,"compactions":0,"dup_reads":0,"secs":211,"tools":"get_context×1 read_file×17 search_workspace×5 task_state×1 propose_edit×8 call_tool×11"}
+TOTAL requests=43 in=1359515 out=6870 cached=0 tool_calls=43 tool_errors=10 model_errors=0 compactions=0 dup_reads=0 secs=211
