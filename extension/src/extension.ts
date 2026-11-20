@@ -34,6 +34,12 @@ export interface ForgeTestApi {
   applyApproved(path: string, edits: EditSpec[]): Promise<{ ok: boolean; message: string }>;
   /** Same work as the Cancel button (without a running model turn). */
   cancelPending(): number;
+  /** Panel input as a user would use it: 'prefill' types text into the input box, 'submit' presses Send. */
+  panelInput(msg: { kind: 'prefill'; text: string } | { kind: 'submit' }): void;
+  /** True while an agent or inline run is in progress. */
+  isRunning(): boolean;
+  /** TrueForge session id of the agent panel's current session. */
+  sessionId(): string | undefined;
 }
 
 export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeTestApi | undefined> {
@@ -182,6 +188,9 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeTestA
     approve,
     applyApproved: (p, edits) => changes.applyApproved(proposalKey(p, edits)),
     cancelPending: () => { killAllCommands(); review.cancelAll(); return changes.cancelAll(); },
+    panelInput: msg => view.post(msg as never),
+    isRunning: () => view.isRunning,
+    sessionId: () => runner?.currentSessionId,
   };
 }
 

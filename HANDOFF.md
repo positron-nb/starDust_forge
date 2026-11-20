@@ -17,10 +17,9 @@
 | Task B (headless) | passes on Nemotron Ultra (61 passed), Gemini (59 passed) and Groq→Gemini handoff (59 passed); 3 files each, no deletions |
 | Task C (headless) | dead endpoint → automatic fallback → edit; Flask restored clean |
 
-## Not verified (needs a person)
-- Inline edit input box, streaming in the panel, context table and budget bar, TrueForge session link, and fallback messages **as seen on screen** (`docs/UI_CHECKLIST.md`).
-- The video and its scorecard timestamps (`docs/DEMO_SCRIPT.md`).
-- Team details in `docs/WRITEUP.md`.
+## Recorded (20 Nov 2026)
+- Demo video (3:50): Task A on Gemini 3.5 Flash, Task B on Gemini 3.1 Flash-Lite (3 files, 59 passed, masked `flask config`), cancellation, Task C (dead endpoint → Flash-Lite fallback). Scorecard timestamps are in `docs/WRITEUP.md`; diffs in `demo/task-a-video.diff`, `demo/task-b-video.diff`.
+- Clicks were scripted (`extension/test-ui/demo.ts`); everything else is live. The extension test host cannot show modal dialogs, so the demo profile auto-approved commands.
 
 ## Commands
 ```bash

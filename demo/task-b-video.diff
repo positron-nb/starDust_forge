@@ -1,0 +1,92 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..8a22b4a9 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -130,6 +130,21 @@ The reloader can also ignore files using :mod:`fnmatch` patterns with the
+ Windows.
+ 
+ 
++Show Configuration
++------------------
++
++To see the current application configuration, use the :func:`config <cli.config_command>`
++command. This will print the configuration as JSON. Values for keys containing
++SECRET, PASSWORD, TOKEN or KEY are masked as ``"***"``. ::
++
++    $ flask config
++    {
++      "DEBUG": false,
++      "SECRET_KEY": "***",
++      "TESTING": false
++    }
++
++
+ Open a Shell
+ ------------
+ 
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..e7577ed1 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -594,6 +594,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1114,6 +1115,22 @@ def routes_command(sort: str, all_methods: bool) -> None:
+     for row in rows:
+         click.echo(template.format(*row))
+ 
++@click.command("config", short_help="Show the config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the config."""
++    import json
++
++    config = {k: v for k, v in current_app.config.items()}
++    mask_keys = {"SECRET", "PASSWORD", "TOKEN", "KEY"}
++
++    for key, value in config.items():
++        if any(mask in key.upper() for mask in mask_keys):
++            config[key] = "***"
++        elif not isinstance(value, (str, int, float, bool, type(None), list, dict)):
++            config[key] = str(value)
++
++    click.echo(json.dumps(config, indent=2, sort_keys=True))
+ 
+ cli = FlaskGroup(
+     name="flask",
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..0e9f24df 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -700,3 +700,26 @@ def test_cli_empty(app):
+ def test_run_exclude_patterns():
+     ctx = run_command.make_context("run", ["--exclude-patterns", __file__])
+     assert ctx.params["exclude_patterns"] == [__file__]
++
++
++def test_config_command(app, runner):
++    app.config["SECRET_KEY"] = "secret"
++    app.config["PASSWORD"] = "password"
++    app.config["TOKEN"] = "token"
++    app.config["KEY"] = "key"
++    app.config["DEBUG"] = True
++    app.config["TESTING"] = False
++
++    cli = FlaskGroup(create_app=lambda: app)
++    result = runner.invoke(cli, ["config"])
++    assert result.exit_code == 0
++    import json
++
++    data = json.loads(result.output)
++    # Configuration is loaded from app; verify keys are present and masked
++    assert data["SECRET_KEY"] == "***"
++    assert data["PASSWORD"] == "***"
++    assert data["TOKEN"] == "***"
++    assert data["KEY"] == "***"
++    assert "DEBUG" in data
++    assert "TESTING" in data

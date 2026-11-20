@@ -23,6 +23,8 @@
     switch (m.kind) {
       case 'clear': log.innerHTML = ''; texts.clear(); tools.clear(); threads.clear(); status.textContent = ''; $('model').textContent = 'no session'; $('session').hidden = true; break;
       case 'user': log.appendChild(el('msg user', m.text)); break;
+      case 'prefill': input.value = m.text; input.scrollTop = input.scrollHeight; break;
+      case 'submit': send(); break;
       case 'text': {
         let d = texts.get(m.id);
         if (!d) { d = el('msg agent', ''); container(m.thread).appendChild(d); texts.set(m.id, d); }

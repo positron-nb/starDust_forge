@@ -15,7 +15,8 @@ export function registerInlineEdit(ctx: vscode.ExtensionContext, deps: {
   view: AgentViewProvider;
   makeRunner: () => Promise<AgentRunner>;
 }): void {
-  ctx.subscriptions.push(vscode.commands.registerCommand('forge.inlineEdit', async () => {
+  // `prefill` (optional) pre-types the instruction into the input box; the user still confirms it.
+  ctx.subscriptions.push(vscode.commands.registerCommand('forge.inlineEdit', async (prefill?: unknown) => {
     const ed = vscode.window.activeTextEditor;
     if (!ed || ed.document.uri.scheme !== 'file') return vscode.window.showInformationMessage('Forge: open a file and select code to edit.');
     if (deps.view.isRunning) return vscode.window.showWarningMessage('Forge: a run is already in progress — cancel it first (Ctrl+Alt+C).');
@@ -30,6 +31,7 @@ export function registerInlineEdit(ctx: vscode.ExtensionContext, deps: {
       title: `Forge inline edit — ${rel}:${start}-${end}`,
       prompt: 'Describe the change for the selected code',
       placeHolder: 'e.g. Treat "off" and "n" as false as well…',
+      value: typeof prefill === 'string' ? prefill : undefined,
       ignoreFocusOut: true,
     });
     if (!instruction?.trim()) return;

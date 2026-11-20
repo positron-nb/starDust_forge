@@ -12,3 +12,6 @@ problem_statement.txt
 docs/WRITEUP.html
 *.vsix
 .vscode-test/
+
+# demo video (uploaded separately)
+demo/*.mp4

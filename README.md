@@ -110,6 +110,8 @@ bench/run.sh taskb openrouter/nemotron-ultra lean 100000     # real pipeline, me
 bench/run.sh mini  <provider/model> lean                     # 3-file sanity task (~5 requests)
 node scripts/session-metrics.mjs bench/results/<run>.log     # provider-reported usage per TrueForge session
 ```
+Demo video: `extension/test-ui/demo.ts` (+ `demo-run.ts`) drives the real extension in VS Code for a recording (select code, fill the inline-edit box or panel input, accept/reject hunks, cancel, type verification commands), and `scripts/make-video.py` cuts the recording into the final video with captions and labelled fast-forwards. Models, TrueForge sessions, edits and test output are live; only the clicks are scripted.
+
 `scripts/reasoning-shim.mjs` is an optional local pass-through for providers that reject replayed `reasoning_content`. With `--dump`, it also records request bodies, which `scripts/prompt-breakdown.mjs` turns into a token breakdown.
 
 ## Security

@@ -1,7 +1,5 @@
 # Forge Agent — TrueFoundry Forge-a-thon Round 1 write-up
 
-> Draft. Fields marked **TODO** must be filled from the final recording/team details — never invented.
-
 ## 1. Team
 **StarDust** (team ID `TM-63CB569D10D`)
 
@@ -44,7 +42,8 @@ Every model below is free; no paid model was used.
 | Model (TrueForge name → provider model) | Where | Role | Verified result |
 |---|---|---|---|
 | `openrouter/nemotron-ultra` → `nvidia/nemotron-3-ultra-550b-a55b:free` | OpenRouter free tier (20 req/min, 50 req/day, no token limit) | Agent mode (Task B) | Task B: 3 files, `test_cli.py` 59–61 passed; 43 requests with the final design (54 before) |
-| `google-gemini/gemini-3-5-flash` (→ `gemini-3-1-flash-lite` fallback) | Google AI Studio free tier | Inline edit (Task A); agent mode alternative | Task A: 19 s after the fallback. Task B: 3 files, 59 passed, 47 requests, after 429/503 → automatic fallback |
+| `google-gemini/gemini-3-5-flash` (→ `gemini-3-1-flash-lite` fallback) | Google AI Studio free tier | Task A in the video; agent mode alternative | Task A: 2 hunks, verified on screen. Task B (9 Nov): 3 files, 59 passed, 47 requests |
+| `google-gemini/gemini-3-1-flash-lite` | Google AI Studio free tier | Task B and the Task C fallback **in the video** | Task B: 5 reviews, 3 files, 59 passed, masked CLI output; survived 503/429 via recovery turns |
 | `broken/dead-model` (custom → `http://127.0.0.1:9/v1`) | unreachable on purpose | Task C | "Model endpoint unreachable" → automatic fallback |
 | `probe/ornith`, `probe/mimo` (9B, Ollama, RTX 5060 8 GB) | local, offline | small edits only | pass a 3-file bug fix; fail Task B (loops) |
 
@@ -53,18 +52,18 @@ Also used during development and benchmarking (all free, results in `MODEL_BENCH
 How to switch: edit `forge.models` (an ordered fallback list), or leave it empty to use the models configured in TrueForge (up to 3, in TrueForge's order). Any provider configured in TrueForge works, and the extension never calls a provider directly. Rejected options, with evidence: Groq free (8K tokens/min is smaller than one useful request) and Cerebras (needs a payment method). See `FREE_MODEL_RESEARCH.md` and `MODEL_BENCHMARK.md`.
 
 ## 6. Scorecard
-TODO after recording — one row per criterion with the real video timestamp.
+Timestamps refer to the submitted video (3:50).
 
 | Criterion | Timestamp | Claim |
 |---|---|---|
-| A1 Inline edit | TODO | Diff in editor with per-hunk accept/reject |
-| A2 Agent mode | TODO | Task B: ≥3 files discovered and edited unprompted |
-| A3 Streaming & cancellation | TODO | Tokens stream; cancel mid-run leaves `git status` clean |
-| B1 Context assembly | TODO | Budgeted retrieval with reasons visible in Task B |
-| B2 Diff safety | TODO | Per-hunk review + undo of an applied change |
-| B3 Resilience | TODO | Unreachable endpoint → automatic fallback, workspace unchanged |
-| B4 TrueForge depth | TODO | MCP connector; approvals drive review and command batches; deferred tools; explicit compaction |
-| C1 Video | — | Tasks A, B, C in order, each verified on screen |
+| A1 Inline edit | 0:17 (diff 0:29, verified 0:44) | Task A: `get_debug_flag` selected, Ctrl+Alt+E, instruction; 2-hunk diff accepted hunk by hunk; off/OFF/n/N/0 → False, 1 → True; `test_helpers.py` 35 passed |
+| A2 Agent mode | 1:04 (reviews 1:22–1:51, verified 2:25–2:48) | Task B from the official instruction, no file names: the agent finds and edits `src/flask/cli.py`, `tests/test_cli.py`, `docs/cli.rst`; 59 passed; real `flask config` masks secrets |
+| A3 Streaming & cancellation | 2:58 (clean at 3:07) | Progress streams in the panel throughout; cancel while a diff waits for review → edits discarded, `git status` clean |
+| B1 Context assembly | 1:10 | `get_context` table in the panel: budgeted BM25 + import-graph picks, each with its reason |
+| B2 Diff safety | 0:29, 2:48, 3:27 | Per-hunk accept (A); Undo Agent Run reverts all 3 files → clean (B); per-hunk reject → nothing written (C) |
+| B3 Resilience | 3:12–3:45 (also 2:07) | Dead endpoint first → "unreachable, falling back" → Flash-Lite diff → rejected → `git status` clean; provider 503/429 → automatic recovery turn |
+| B4 TrueForge depth | 1:55–2:25 | TrueForge session of the Task B run: MCP tools, approval pauses as diff reviews, recovery turns, deferred tools (`Listing tools` → `get_tool_info` → `call_tool`) |
+| C1 Video | 0:00–3:50 | Tasks A, B, C in order, each verified on screen |
 | C2 Write-up | — | This document: architecture, context strategy, model setup, trade-offs, scorecard, limitations |
 
 ## 7. Tools used
@@ -72,6 +71,7 @@ AI coding assistants: Claude Code (models Claude Opus 5.5, Claude Fable 5.2 and 
 
 ## 8. Known limitations and what you would do with another month
 - Test counts: Task B passes when **all of `tests/test_cli.py`** passes, meaning the 58 baseline tests plus the agent's new ones (61 in the Nemotron run, 59 in the Gemini run). The whole Flask suite is **not** fully green: `tests/test_reqctx.py::test_bad_environ_raises_bad_request` already fails on clean 3.1.3 (`22d92470`: 489 passed, 1 failed) and is unrelated to our change.
+- The video is a live run, but its clicks and keystrokes are scripted (`extension/test-ui/demo.ts` drives the same commands as the keybindings inside VS Code's extension test host). That host cannot show modal dialogs, so the demo profile auto-approves agent commands (`.*`; the hard deny-list still applies). Free-tier caps shaped it: Nemotron's 50 requests/day went on two attempts (one stalled on provider timeouts), so Task B runs on Flash-Lite. An earlier Flash-Lite take passed its own test but failed the real CLI (no app context); our on-screen check caught it, and the video shows a clean re-run.
 - Task B on the free Nemotron tier took 54 requests against a 50/day cap. The work was finished by about request 50; extra verification probes (23 `run_command` calls) made up most of the overrun. Next: a test-command budget and a single "verify" step.
 - Without compaction, the run's input reached 1.7M tokens (largest request 47.6k). That is fine on free OpenRouter, but costly on a paid model. Next: prompt caching where the provider supports it.
 - Results vary between runs of the same free model (Nemotron: one pass in 54 requests, one run cut off by the daily cap at 37). The gates and the handoff reduce this, but do not remove it.

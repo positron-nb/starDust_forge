@@ -1,0 +1,149 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..c2b94490 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -146,6 +146,19 @@ context will be active, and the app instance will be imported. ::
+ Use :meth:`~Flask.shell_context_processor` to add other automatic imports.
+ 
+ 
++Show the Config
++----------------
++
++To inspect the application's configuration, use the :func:`config <cli.config_command>` command. It prints the configuration as JSON. Sensitive values (keys containing SECRET, PASSWORD, TOKEN, or KEY) are masked as ``***``. ::
++
++    $ flask config
++    {
++      "DEBUG": false,
++      "SECRET_KEY": "***",
++      "SQLALCHEMY_DATABASE_URI": "sqlite:///app.db"
++    }
++
++
+ .. _dotenv:
+ 
+ Environment Variables From dotenv
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..39383ade 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -594,6 +594,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1116,31 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the app config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the application configuration.
++
++    Values for keys containing SECRET, PASSWORD, TOKEN, or KEY are masked.
++    """
++    import json
++
++    config = current_app.config
++    masked_config = {}
++    sensitive_keywords = ("SECRET", "PASSWORD", "TOKEN", "KEY")
++
++    for key, value in config.items():
++        if any(keyword in key.upper() for keyword in sensitive_keywords):
++            masked_config[key] = "***"
++        else:
++            masked_config[key] = value
++
++    click.echo(json.dumps(masked_config, indent=2, default=str, sort_keys=True))
++
++
++# Add it to the app's own CLI so it's available in tests.
++# Flask.cli.add_command(config_command)
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+@@ -1126,6 +1152,8 @@ in the current directory.
+ """,
+ )
+ 
++cli.add_command(config_command)
++
+ 
+ def main() -> None:
+     cli.main()
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..bdbb1948 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -518,6 +518,47 @@ class TestRoutes:
+         assert "Host" in result.output
+ 
+ 
++class TestConfig:
++    @pytest.fixture
++    def app(self):
++        app = Flask(__name__)
++        app.config.update(
++            {
++                "DEBUG": False,
++                "SECRET_KEY": "secret-value",
++                "DATABASE_PASSWORD": "db-pass",
++                "API_TOKEN": "token-value",
++                "ENCRYPTION_KEY": "key-value",
++                "NORMAL_SETTING": "normal",
++            }
++        )
++        return app
++
++    @pytest.fixture
++    def invoke(self, app, runner):
++        cli = FlaskGroup(create_app=lambda: app)
++        return partial(runner.invoke, cli)
++
++    def test_config_output(self, invoke):
++        result = invoke(["config"])
++        assert result.exit_code == 0
++        import json
++        data = json.loads(result.output)
++        assert data["DEBUG"] is False
++        assert data["NORMAL_SETTING"] == "normal"
++        assert data["SECRET_KEY"] == "***"
++        assert data["DATABASE_PASSWORD"] == "***"
++        assert data["API_TOKEN"] == "***"
++        assert data["ENCRYPTION_KEY"] == "***"
++
++    def test_config_sorted_keys(self, invoke):
++        result = invoke(["config"])
++        import json
++        data = json.loads(result.output)
++        keys = list(data.keys())
++        assert keys == sorted(keys)
++
++
+ def dotenv_not_available():
+     try:
+         import dotenv  # noqa: F401
+@@ -700,3 +741,19 @@ def test_cli_empty(app):
+ def test_run_exclude_patterns():
+     ctx = run_command.make_context("run", ["--exclude-patterns", __file__])
+     assert ctx.params["exclude_patterns"] == [__file__]
++
++
++def test_config_command(app):
++    from flask.cli import config_command
++    app.cli.add_command(config_command)
++    app.config["SECRET_KEY"] = "secret"
++    app.config["PASSWORD"] = "password"
++    app.config["DATABASE"] = "db"
++    runner = app.test_cli_runner()
++    result = runner.invoke(args=["config"])
++    assert result.exit_code == 0
++    import json
++    data = json.loads(result.output)
++    assert data["SECRET_KEY"] == "***"
++    assert data["PASSWORD"] == "***"
++    assert data["DATABASE"] == "db"
