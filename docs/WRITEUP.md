@@ -3,7 +3,15 @@
 > Draft. Fields marked **TODO** must be filled from the final recording/team details — never invented.
 
 ## 1. Team
-TODO: team name, members, college/employer, GitHub handles.
+**StarDust** (team ID `TM-63CB569D10D`)
+
+| Member | Role |
+|---|---|
+| Abhishek Kumar Singh | Team leader |
+| Abhinav Rai | Member (GitHub: `positron-nb`, repository owner) |
+| Gaurav Singh Rajpoot | Member |
+| Ansh Pandey | Member |
+| Naman Singh | Member |
 
 ## 2. Starting point
 From scratch — no upstream fork. Third-party code is limited to ordinary dependencies: `@truefoundry/trueforge-sdk` (MIT), `@modelcontextprotocol/sdk` (MIT), `zod` (MIT), `diff`/jsdiff (BSD-3-Clause). Repository: <https://github.com/positron-nb/starDust_forge>.
