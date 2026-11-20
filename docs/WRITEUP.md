@@ -52,22 +52,22 @@ Also used during development and benchmarking (all free, results in `MODEL_BENCH
 How to switch: edit `forge.models` (an ordered fallback list), or leave it empty to use the models configured in TrueForge (up to 3, in TrueForge's order). Any provider configured in TrueForge works, and the extension never calls a provider directly. Rejected options, with evidence: Groq free (8K tokens/min is smaller than one useful request) and Cerebras (needs a payment method). See `FREE_MODEL_RESEARCH.md` and `MODEL_BENCHMARK.md`.
 
 ## 6. Scorecard
-Timestamps refer to the submitted video (3:50).
+Timestamps refer to the submitted video (3:43, with voice-over).
 
 | Criterion | Timestamp | Claim |
 |---|---|---|
-| A1 Inline edit | 0:17 (diff 0:29, verified 0:44) | Task A: `get_debug_flag` selected, Ctrl+Alt+E, instruction; 2-hunk diff accepted hunk by hunk; off/OFF/n/N/0 → False, 1 → True; `test_helpers.py` 35 passed |
-| A2 Agent mode | 1:04 (reviews 1:22–1:51, verified 2:25–2:48) | Task B from the official instruction, no file names: the agent finds and edits `src/flask/cli.py`, `tests/test_cli.py`, `docs/cli.rst`; 59 passed; real `flask config` masks secrets |
-| A3 Streaming & cancellation | 2:58 (clean at 3:07) | Progress streams in the panel throughout; cancel while a diff waits for review → edits discarded, `git status` clean |
-| B1 Context assembly | 1:10 | `get_context` table in the panel: budgeted BM25 + import-graph picks, each with its reason |
-| B2 Diff safety | 0:29, 2:48, 3:27 | Per-hunk accept (A); Undo Agent Run reverts all 3 files → clean (B); per-hunk reject → nothing written (C) |
-| B3 Resilience | 3:12–3:45 (also 2:07) | Dead endpoint first → "unreachable, falling back" → Flash-Lite diff → rejected → `git status` clean; provider 503/429 → automatic recovery turn |
-| B4 TrueForge depth | 1:55–2:25 | TrueForge session of the Task B run: MCP tools, approval pauses as diff reviews, recovery turns, deferred tools (`Listing tools` → `get_tool_info` → `call_tool`) |
-| C1 Video | 0:00–3:50 | Tasks A, B, C in order, each verified on screen |
+| A1 Inline edit | 0:31 (diff 0:43, verified 0:57) | Task A: `get_debug_flag` selected, Ctrl+Alt+E, instruction; 2-hunk diff accepted hunk by hunk; off/OFF/n/N/0 → False, 1/yes → True; `test_helpers.py` 35 passed |
+| A2 Agent mode | 1:12 (reviews 1:35–2:00, verified 2:24–2:42) | Task B from the official instruction, no file names: the agent finds and edits `src/flask/cli.py`, `tests/test_cli.py`, `docs/cli.rst`; 59 passed; real `flask config` masks secrets |
+| A3 Streaming & cancellation | 2:51 (clean at 3:00) | Progress streams in the panel throughout; cancel while a diff waits for review → edits discarded, `git status` clean |
+| B1 Context assembly | 1:20 | `get_context` table in the panel: budgeted BM25 + import-graph picks, each with its reason |
+| B2 Diff safety | 0:43, 2:42, 3:20 | Per-hunk accept (A); Undo Agent Run reverts all 3 files → clean (B); per-hunk reject → nothing written (C) |
+| B3 Resilience | 3:05–3:36 (also 2:08) | Dead endpoint first → "unreachable, falling back" → Flash-Lite diff → rejected → `git status` clean; provider 503/429 → automatic recovery turn |
+| B4 TrueForge depth | 2:00–2:24 | TrueForge session of the Task B run: MCP tools, approval pauses as diff reviews, recovery turns, deferred tools (`Listing tools` → `get_tool_info` → `call_tool`) |
+| C1 Video | 0:00–3:43 | Tasks A, B, C in order, each verified on screen; narrated |
 | C2 Write-up | — | This document: architecture, context strategy, model setup, trade-offs, scorecard, limitations |
 
 ## 7. Tools used
-AI coding assistants: Claude Code (models Claude Opus 5.5, Claude Fable 5.2 and Claude Haiku 5.5) for research, implementation, tests and documentation; ChatGPT for reviewing the plan and benchmark reports. Other tools: VS Code, TrueForge in local mode, Ollama, ripgrep, vitest, esbuild, @vscode/test-electron, @vscode/vsce.
+AI coding assistants: Claude Code (models Claude Opus 5.5, Claude Fable 5.2 and Claude Haiku 5.5) for research, implementation, tests and documentation; ChatGPT for reviewing the plan and benchmark reports. Other tools: VS Code, TrueForge in local mode, Ollama, ripgrep, vitest, esbuild, @vscode/test-electron, @vscode/vsce; for the video, ffmpeg and a synthesized voice-over (edge-tts, en-US-AndrewNeural).
 
 ## 8. Known limitations and what you would do with another month
 - Test counts: Task B passes when **all of `tests/test_cli.py`** passes, meaning the 58 baseline tests plus the agent's new ones (61 in the Nemotron run, 59 in the Gemini run). The whole Flask suite is **not** fully green: `tests/test_reqctx.py::test_bad_environ_raises_bad_request` already fails on clean 3.1.3 (`22d92470`: 489 passed, 1 failed) and is unrelated to our change.
